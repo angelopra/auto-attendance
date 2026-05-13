@@ -1,0 +1,88 @@
+.person-card {
+  position: relative;
+
+  .merge-check {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    cursor: pointer;
+
+    input[type=checkbox] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: #1e3a5f;
+    }
+  }
+
+  .rename-input {
+    width: 100%;
+    font-size: 0.85rem;
+    padding: 0.25rem 0.4rem;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+  }
+
+  .card-actions {
+    display: flex;
+    gap: 0.3rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-sm {
+    font-size: 0.78rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 5px;
+  }
+}
+
+/* Floating bar at bottom of viewport */
+.merge-bar {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e3a5f;
+  color: #fff;
+  border-radius: 10px;
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  z-index: 100;
+  flex-wrap: wrap;
+
+  span { font-size: 0.9rem; white-space: nowrap; }
+
+  select {
+    padding: 0.35rem 0.6rem;
+    border-radius: 6px;
+    border: none;
+    font-size: 0.9rem;
+    min-width: 160px;
+  }
+
+  button {
+    background: #fff;
+    color: #1e3a5f;
+    font-weight: 600;
+    padding: 0.35rem 0.9rem;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    &:hover:not(:disabled) { background: #e0e7ff; }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+
+  .btn-outline {
+    background: transparent;
+    color: #fff;
+    border: 1.5px solid rgba(255,255,255,0.6);
+    &:hover { background: rgba(255,255,255,0.15); }
+  }
+
+  .merge-error { color: #fca5a5; font-size: 0.85rem; }
+}

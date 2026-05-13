@@ -1,0 +1,38 @@
+﻿<section class="tab-panel">
+  <h2>Attendance</h2>
+  <button (click)="load()">Refresh</button>
+
+  @if (allDates().length === 0) {
+    <p>No data yet. Upload a group photo first.</p>
+  } @else {
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Person</th>
+            @for (date of allDates(); track date) {
+              <th>{{ date }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.person.id) {
+            <tr>
+              <td class="person-cell">
+                @if (row.person.selfie_path) {
+                  <img [src]="selfieUrl(row.person.selfie_path)" alt="" class="thumb-sm" />
+                }
+                {{ row.person.name }}
+              </td>
+              @for (date of allDates(); track date) {
+                <td [class.present]="wasPresent(row, date)" [class.absent]="!wasPresent(row, date)">
+                  @if (wasPresent(row, date)) { &#10003; }
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

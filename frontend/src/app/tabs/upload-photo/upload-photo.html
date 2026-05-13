@@ -1,0 +1,46 @@
+<section class="tab-panel">
+  <h2>Upload Group Photo</h2>
+
+  <div class="form-row">
+    <label>Date
+      <input type="date" [(ngModel)]="date" />
+    </label>
+  </div>
+
+  <div class="form-row">
+    <label>Photo
+      <input type="file" accept="image/*" (change)="onFileChange($event)" />
+    </label>
+    @if (preview) {
+      <img [src]="preview" alt="Preview" class="preview-img" />
+    }
+  </div>
+
+  <button (click)="upload()" [disabled]="uploading()">
+    {{ uploading() ? 'Uploading...' : 'Upload & Process' }}
+  </button>
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+
+  @if (uploadedPhoto()) {
+    <div class="result">
+      <h3>Processed: {{ uploadedPhoto()!.date }}</h3>
+      <p>{{ detections().length }} face(s) detected.</p>
+      <div class="face-grid">
+        @for (d of detections(); track d.id) {
+          <div class="face-card">
+            @if (d.face_crop_path) {
+              <img [src]="faceUrl(d.face_crop_path)" alt="Face" />
+            }
+            <span>{{ d.person?.name ?? 'Unknown' }}</span>
+            @if (d.confidence) {
+              <small>{{ (+d.confidence * 100).toFixed(1) }}%</small>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
+</section>

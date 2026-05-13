@@ -1,0 +1,16 @@
+We need a web application in angular 21 (and python for backend); 
+This is a face recognition app for verifying attendance.
+
+We need to have 3 "tabs":
+
+1. One is to upload a group photo with a bunch of faces + a date; The app should save the faces and the photo itself in the backend;
+
+2. A tab that we can configure an array of tuples (selfie, name) to be used as the "database" of known faces; The app should save the tuples in the backend;
+
+3. A tab that shows a relation of faces and dates, showing who was present on which date. 
+
+If someone is not labeled in the second tab, please create a tuple for the person with a placeholder name (e.g., "Unknown") and save it in the backend. Allow us to edit the name later. Allow us to merge duplicate people in the second tab as well.
+
+Use retinaFace. Do not use face_recognition library. 
+
+Try to keep it fast and scalable.

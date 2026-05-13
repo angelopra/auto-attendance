@@ -1,0 +1,59 @@
+<section class="tab-panel">
+  <h2>Known Faces</h2>
+
+  <div class="card add-form">
+    <h3>Add Person</h3>
+    <label>Name <input type="text" [(ngModel)]="newName" placeholder="Full name" /></label>
+    <label>Selfie <input type="file" accept="image/*" (change)="onSelfieChange($event)" /></label>
+    @if (newPreview) {
+      <img [src]="newPreview" alt="New selfie" class="thumb" />
+    }
+    <button (click)="addPerson()" [disabled]="saving()">{{ saving() ? 'Saving...' : 'Add' }}</button>
+    @if (error()) { <p class="error">{{ error() }}</p> }
+  </div>
+
+  <div class="person-grid">
+    @for (p of persons(); track p.id) {
+      <div class="person-card" [class.selected]="isSelected(p.id)">
+        <label class="merge-check" title="Select to merge">
+          <input type="checkbox" [checked]="isSelected(p.id)" (change)="toggleSelect(p.id)" />
+        </label>
+        @if (p.selfie_path) {
+          <img [src]="selfieUrl(p.selfie_path)" alt="Selfie" class="thumb" />
+        } @else {
+          <div class="no-photo">No photo</div>
+        }
+        @if (editingId === p.id) {
+          <input type="text" [(ngModel)]="editingName" class="rename-input" />
+          <div class="card-actions">
+            <button (click)="saveEdit(p)">Save</button>
+            <button (click)="cancelEdit()">Cancel</button>
+          </div>
+        } @else {
+          <span class="name">{{ p.name }}</span>
+          <div class="card-actions">
+            <button class="btn-sm" (click)="startEdit(p)">Rename</button>
+            <button class="btn-sm danger" (click)="deletePerson(p.id)">Delete</button>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  @if (selectedIds().size >= 2) {
+    <div class="merge-bar">
+      <span>{{ selectedIds().size }} selected &mdash; keep:</span>
+      <select [(ngModel)]="mergeTargetId">
+        <option [ngValue]="null">-- pick target --</option>
+        @for (p of persons(); track p.id) {
+          @if (isSelected(p.id)) {
+            <option [ngValue]="p.id">{{ p.name }} (#{{ p.id }})</option>
+          }
+        }
+      </select>
+      <button (click)="merge()" [disabled]="!mergeTargetId">Merge</button>
+      <button class="btn-outline" (click)="clearSelection()">Cancel</button>
+      @if (mergeError()) { <span class="merge-error">{{ mergeError() }}</span> }
+    </div>
+  }
+</section>
