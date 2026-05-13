@@ -1,6 +1,5 @@
 ﻿<section class="tab-panel">
   <h2>Attendance</h2>
-  <button (click)="load()">Refresh</button>
 
   @if (allDates().length === 0) {
     <p>No data yet. Upload a group photo first.</p>
@@ -25,8 +24,9 @@
                 {{ row.person.name }}
               </td>
               @for (date of allDates(); track date) {
-                <td [class.present]="wasPresent(row, date)" [class.absent]="!wasPresent(row, date)">
-                  @if (wasPresent(row, date)) { &#10003; }
+                @let wasPresent_ = wasPresent(row, date);
+                <td [class.present]="wasPresent_" [class.absent]="!wasPresent_">
+                  @if (wasPresent_) { &#10003; }
                 </td>
               }
             </tr>

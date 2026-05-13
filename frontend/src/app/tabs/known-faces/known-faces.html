@@ -13,7 +13,7 @@
   </div>
 
   <div class="person-grid">
-    @for (p of persons(); track p.id) {
+    @for (p of uniquePersons(); track p.id) {
       <div class="person-card" [class.selected]="isSelected(p.id)">
         <label class="merge-check" title="Select to merge">
           <input type="checkbox" [checked]="isSelected(p.id)" (change)="toggleSelect(p.id)" />
@@ -43,15 +43,15 @@
   @if (selectedIds().size >= 2) {
     <div class="merge-bar">
       <span>{{ selectedIds().size }} selected &mdash; keep:</span>
-      <select [(ngModel)]="mergeTargetId">
+      <select [(ngModel)]="mergeTarget">
         <option [ngValue]="null">-- pick target --</option>
-        @for (p of persons(); track p.id) {
+        @for (p of allKnownPersons(); track p.id) {
           @if (isSelected(p.id)) {
-            <option [ngValue]="p.id">{{ p.name }} (#{{ p.id }})</option>
+            <option [ngValue]="p">{{ p.name }} (#{{ p.id }})</option>
           }
         }
       </select>
-      <button (click)="merge()" [disabled]="!mergeTargetId">Merge</button>
+      <button (click)="merge()" [disabled]="!mergeTarget">Merge</button>
       <button class="btn-outline" (click)="clearSelection()">Cancel</button>
       @if (mergeError()) { <span class="merge-error">{{ mergeError() }}</span> }
     </div>

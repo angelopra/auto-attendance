@@ -1,7 +1,11 @@
-import { Component, OnInit, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { Component, computed, OnInit, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ApiService, KnownPerson } from '../../services/api';
+import { uniqBy } from '../../tools';
+import { forkJoin } from 'rxjs';
+
+export const unknownName = 'Unknown';
 
 @Component({
   selector: 'app-known-faces',
@@ -11,14 +15,16 @@ import { ApiService, KnownPerson } from '../../services/api';
   styleUrl: './known-faces.scss',
 })
 export class KnownFaces implements OnInit {
-  persons = signal<KnownPerson[]>([]);
+  allPersons = signal<KnownPerson[]>([]);
+  allKnownPersons = computed(() => this.uniquePersons().filter(p => p.name !== unknownName));
+  uniquePersons = computed(() => uniqBy(this.allPersons(), (p, i) => p.name === unknownName ? i : p.name));
   newName = '';
   newSelfie: File | null = null;
   newPreview: string | null = null;
   editingId: number | null = null;
   editingName = '';
   selectedIds = signal<Set<number>>(new Set());
-  mergeTargetId: number | null = null;
+  mergeTarget: KnownPerson | null = null;
   mergeError = signal('');
   error = signal('');
   saving = signal(false);
@@ -28,7 +34,7 @@ export class KnownFaces implements OnInit {
   ngOnInit() { this.load(); }
 
   load() {
-    this.api.getPersons().subscribe({ next: p => this.persons.set(p) });
+    this.api.getPersons().subscribe(p => this.allPersons.set(p));
   }
 
   onSelfieChange(event: Event) {
@@ -57,16 +63,14 @@ export class KnownFaces implements OnInit {
   startEdit(p: KnownPerson) { this.editingId = p.id; this.editingName = p.name; }
 
   saveEdit(p: KnownPerson) {
-    this.api.updatePerson(p.id, this.editingName).subscribe({
-      next: () => { this.editingId = null; this.load(); },
-    });
+    this.api.updatePerson(p.id, this.editingName).subscribe(() => { this.editingId = null; this.load(); });
   }
 
   cancelEdit() { this.editingId = null; }
 
   deletePerson(id: number) {
     if (!confirm('Delete this person?')) return;
-    this.api.deletePerson(id).subscribe({ next: () => this.load() });
+    this.api.deletePerson(id).subscribe(() => this.load());
   }
 
   toggleSelect(id: number) {
@@ -80,19 +84,19 @@ export class KnownFaces implements OnInit {
   clearSelection() { this.selectedIds.set(new Set()); }
 
   merge() {
-    const targetId = Number(this.mergeTargetId);
-    if (!targetId || this.selectedIds().size < 2) {
+    const target = this.mergeTarget;
+    if (!target || this.selectedIds().size < 2) {
       this.mergeError.set('Select 2+ faces and pick a merge target among them.');
       return;
     }
-    if (!this.selectedIds().has(targetId)) {
+    if (!this.selectedIds().has(target.id)) {
       this.mergeError.set('The merge target must also be checked.');
       return;
     }
-    const sources = [...this.selectedIds()].filter(id => id !== targetId);
+    const sources = [...this.selectedIds()].filter(id => id !== target.id);
     this.mergeError.set('');
-    this.api.mergePersons(sources, targetId).subscribe({
-      next: () => { this.selectedIds.set(new Set()); this.mergeTargetId = null; this.load(); },
+    forkJoin(sources.map(sourceId => this.api.updatePerson(sourceId, target.name))).subscribe({
+      next: () => { this.selectedIds.set(new Set()); this.mergeTarget = null; this.load(); },
       error: err => this.mergeError.set('Merge failed: ' + (err.message ?? '')),
     });
   }

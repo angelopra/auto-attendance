@@ -1,6 +1,13 @@
-import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ApiService, AttendanceRow } from '../../services/api';
+import { Component, OnInit, signal } from '@angular/core';
+import { ApiService, AttendanceRow, KnownPerson } from '../../services/api';
+import { groupBy } from '../../tools';
+import { unknownName } from '../known-faces/known-faces';
+
+interface AttendanceDataRow {
+  person: KnownPerson;
+  dates: Set<string>;
+}
 
 @Component({
   selector: 'app-attendance',
@@ -10,7 +17,7 @@ import { ApiService, AttendanceRow } from '../../services/api';
   styleUrl: './attendance.scss',
 })
 export class Attendance implements OnInit {
-  rows = signal<AttendanceRow[]>([]);
+  rows = signal<AttendanceDataRow[]>([]);
   allDates = signal<string[]>([]);
 
   constructor(private api: ApiService) {}
@@ -20,7 +27,7 @@ export class Attendance implements OnInit {
   load() {
     this.api.getAttendance().subscribe({
       next: rows => {
-        this.rows.set(rows);
+        this.rows.set(groupAttendances(rows));
         const dateSet = new Set<string>();
         rows.forEach(r => r.dates.forEach(d => dateSet.add(d)));
         this.allDates.set([...dateSet].sort());
@@ -28,9 +35,16 @@ export class Attendance implements OnInit {
     });
   }
 
-  wasPresent(row: AttendanceRow, date: string): boolean {
-    return row.dates.includes(date);
+  wasPresent(row: AttendanceDataRow, date: string): boolean {
+    return row.dates.has(date);
   }
 
   selfieUrl(path: string | null) { return this.api.imageUrl(path); }
+}
+
+function groupAttendances(attendances: AttendanceRow[]): AttendanceDataRow[] {
+  return Object.values(groupBy(attendances, (a, i) => a.person.name === unknownName ? i : a.person.name)).map(group => ({
+    person: group![0].person,
+    dates: new Set(group!.flatMap(a => a.dates)),
+  }));
 }

@@ -100,6 +100,7 @@ def update_person(
     return person
 
 
+# unused (doesn't behave as desired)
 @app.post("/persons/merge", response_model=schemas.KnownPersonOut)
 def merge_persons(payload: schemas.MergeRequest, db: Session = Depends(get_db)):
     """Merge source persons into target person. Detections are re-linked."""
@@ -239,3 +240,7 @@ def get_detections_for_photo(photo_id: int, db: Session = Depends(get_db)):
         .filter(models.AttendanceDetection.photo_id == photo_id)
         .all()
     )
+
+# TODO
+# - Delete GroupPhoto (so it deletes one whole date wit all its attendances)
+# - Create/Delete AttendanceDetection

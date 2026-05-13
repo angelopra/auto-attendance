@@ -54,6 +54,9 @@ export class ApiService {
     return this.http.patch<KnownPerson>(`${this.base}/persons/${id}`, { name });
   }
 
+  /**
+   * @deprecated
+   */
   mergePersons(sourceIds: number[], targetId: number): Observable<KnownPerson> {
     return this.http.post<KnownPerson>(`${this.base}/persons/merge`, {
       source_ids: sourceIds,
