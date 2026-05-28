@@ -1,21 +1,49 @@
 ﻿<section class="tab-panel">
   <h2>Attendance</h2>
 
-  @if (allDates().length === 0) {
-    <p>No data yet. Upload a group photo first.</p>
+  <div class="attendance-controls" style="display: flex; justify-content: space-between; margin-bottom: 1rem; align-items: flex-end;">
+    <form [formGroup]="filterForm" class="filter-bar">
+      <div class="input-group">
+        <label for="searchName">Person Name</label>
+        <input id="searchName" type="text" formControlName="searchName" placeholder="Search..." />
+      </div>
+
+      <div class="input-group">
+        <label for="startDate">From</label>
+        <input id="startDate" type="date" formControlName="startDate" />
+      </div>
+
+      <div class="input-group">
+        <label for="endDate">To</label>
+        <input id="endDate" type="date" formControlName="endDate" />
+      </div>
+
+      <button type="button" class="btn-secondary" (click)="resetFilters()">Clear</button>
+    </form>
+
+    @if (filteredDates().length > 5) {
+      <div class="pagination-buttons" style="display: flex; gap: 0.5rem;">
+        <button (click)="prevDays()" [disabled]="dateStartIndex() === 0">&larr; Prev</button>
+        <button (click)="nextDays()" [disabled]="dateStartIndex() + 5 >= filteredDates().length">Next &rarr;</button>
+      </div>
+    }
+  </div>
+
+  @if (visibleDates().length === 0) {
+    <p>No data yet. Upload a group photo first or adjust your filters.</p>
   } @else {
     <div class="table-wrapper">
       <table>
         <thead>
           <tr>
             <th>Person</th>
-            @for (date of allDates(); track date) {
+            @for (date of visibleDates(); track date) {
               <th>{{ date }}</th>
             }
           </tr>
         </thead>
         <tbody>
-          @for (row of rows(); track row.person.id) {
+          @for (row of filteredRows(); track row.person.id) {
             <tr>
               <td class="person-cell">
                 @if (row.person.selfie_path) {
@@ -23,7 +51,7 @@
                 }
                 {{ row.person.name }}
               </td>
-              @for (date of allDates(); track date) {
+              @for (date of visibleDates(); track date) {
                 @let wasPresent_ = wasPresent(row, date);
                 <td [class.present]="wasPresent_" [class.absent]="!wasPresent_">
                   @if (wasPresent_) { &#10003; }

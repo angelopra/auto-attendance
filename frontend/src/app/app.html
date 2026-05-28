@@ -1,5 +1,5 @@
 <header>
-  <h1>Kendo Attendance</h1>
+  <h1>Auto Attendance</h1>
   <nav>
     <button [class.active]="activeTab() === 'upload'" (click)="setTab('upload')">Upload Photo</button>
     <button [class.active]="activeTab() === 'known'" (click)="setTab('known')">Known Faces</button>
@@ -8,7 +8,7 @@
 </header>
 
 <main>
-  @if (activeTab() === 'upload') { <app-upload-photo /> }
+  <app-upload-photo [class.hidden]="activeTab() !== 'upload'" />
   @if (activeTab() === 'known') { <app-known-faces /> }
   @if (activeTab() === 'attendance') { <app-attendance /> }
 </main>
