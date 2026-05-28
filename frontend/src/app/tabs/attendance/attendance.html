@@ -21,12 +21,18 @@
       <button type="button" class="btn-secondary" (click)="resetFilters()">Clear</button>
     </form>
 
-    @if (filteredDates().length > 5) {
-      <div class="pagination-buttons" style="display: flex; gap: 0.5rem;">
-        <button (click)="prevDays()" [disabled]="dateStartIndex() === 0">&larr; Prev</button>
-        <button (click)="nextDays()" [disabled]="dateStartIndex() + 5 >= filteredDates().length">Next &rarr;</button>
-      </div>
-    }
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+      <button type="button" class="btn-success" (click)="exportToExcel()" style="background-color: #2e7d32; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">
+        Export Excel
+      </button>
+
+      @if (filteredDates().length > 5) {
+        <div class="pagination-buttons" style="display: flex; gap: 0.5rem;">
+          <button (click)="prevDays()" [disabled]="dateStartIndex() === 0">&larr; Prev</button>
+          <button (click)="nextDays()" [disabled]="dateStartIndex() + 5 >= filteredDates().length">Next &rarr;</button>
+        </div>
+      }
+    </div>
   </div>
 
   @if (visibleDates().length === 0) {
