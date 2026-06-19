@@ -15,7 +15,20 @@ The app stores attendance records per person and per day.
 
 ## Running the App
 
-### Windows
+### Docker (recommended)
+
+Use Docker Compose to run both services together:
+
+1. Build and start the containers:
+   ```powershell
+   docker compose up --build
+   ```
+2. Open the frontend at `http://localhost:4200`.
+3. The backend API is available at `http://localhost:8000`.
+
+The backend stores the SQLite database and uploaded files under `backend/database`, and that folder is mounted from your machine into the backend container.
+
+### Windows PowerShell
 
 Run the `start.ps1` script with PowerShell.
 

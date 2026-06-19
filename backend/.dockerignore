@@ -1,0 +1,13 @@
+venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+build/
+dist/
+.eggs/
+.python-version
+.pytest_cache
+Dockerfile
