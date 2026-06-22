@@ -13,5 +13,12 @@ import { Attendance } from './tabs/attendance/attendance';
 })
 export class App {
   activeTab = signal<'upload' | 'known' | 'attendance'>('upload');
+  authorized = signal(false);
+
+  constructor() {
+    const params = new URLSearchParams(window.location.search);
+    this.authorized.set(!!params.get('auth'));
+  }
+
   setTab(t: 'upload' | 'known' | 'attendance') { this.activeTab.set(t); }
 }

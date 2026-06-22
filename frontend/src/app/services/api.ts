@@ -34,61 +34,69 @@ export interface AttendanceRow {
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
-  private base = 'http://localhost:8000';
+  private base = '';
+  private authToken = '';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) {
+    this.authToken = new URLSearchParams(window.location.search).get('auth') ?? '';
+  }
+
+  private auth(url: string): string {
+    const sep = url.includes('?') ? '&' : '?';
+    return this.authToken ? `${url}${sep}auth=${this.authToken}` : url;
+  }
 
   // ── Persons ──────────────────────────────────────────────────────────────
   getPersons(): Observable<KnownPerson[]> {
-    return this.http.get<KnownPerson[]>(`${this.base}/persons`);
+    return this.http.get<KnownPerson[]>(this.auth(`${this.base}/persons`));
   }
 
   createPerson(name: string, selfie: File): Observable<KnownPerson> {
     const fd = new FormData();
     fd.append('name', name);
     fd.append('selfie', selfie);
-    return this.http.post<KnownPerson>(`${this.base}/persons`, fd);
+    return this.http.post<KnownPerson>(this.auth(`${this.base}/persons`), fd);
   }
 
   updatePerson(id: number, name: string): Observable<KnownPerson> {
-    return this.http.patch<KnownPerson>(`${this.base}/persons/${id}`, { name });
+    return this.http.patch<KnownPerson>(this.auth(`${this.base}/persons/${id}`), { name });
   }
 
   /**
    * @deprecated
    */
   mergePersons(sourceIds: number[], targetId: number): Observable<KnownPerson> {
-    return this.http.post<KnownPerson>(`${this.base}/persons/merge`, {
+    return this.http.post<KnownPerson>(this.auth(`${this.base}/persons/merge`), {
       source_ids: sourceIds,
       target_id: targetId,
     });
   }
 
   deletePerson(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.base}/persons/${id}`);
+    return this.http.delete<void>(this.auth(`${this.base}/persons/${id}`));
   }
 
   // ── Group Photos ──────────────────────────────────────────────────────────
   getPhotos(): Observable<GroupPhoto[]> {
-    return this.http.get<GroupPhoto[]>(`${this.base}/photos`);
+    return this.http.get<GroupPhoto[]>(this.auth(`${this.base}/photos`));
   }
 
   uploadGroupPhoto(date: string, photo: File): Observable<GroupPhoto> {
     const fd = new FormData();
     fd.append('date', date);
     fd.append('photo', photo);
-    return this.http.post<GroupPhoto>(`${this.base}/photos/upload`, fd);
+    return this.http.post<GroupPhoto>(this.auth(`${this.base}/photos/upload`), fd);
   }
 
   getDetectionsForPhoto(photoId: number): Observable<AttendanceDetection[]> {
     return this.http.get<AttendanceDetection[]>(
-      `${this.base}/attendance/detections/${photoId}`
+      this.auth(`${this.base}/attendance/detections/${photoId}`)
     );
   }
 
   // ── Attendance ────────────────────────────────────────────────────────────
   getAttendance(): Observable<AttendanceRow[]> {
-    return this.http.get<AttendanceRow[]>(`${this.base}/attendance`);
+    return this.http.get<AttendanceRow[]>(this.auth(`${this.base}/attendance`));
   }
 
   imageUrl(path: string | null): string {
@@ -96,6 +104,6 @@ export class ApiService {
     // Paths stored in DB may include "database/" prefix; static files are
     // mounted at /uploads pointing to database/uploads/, so strip it.
     const normalized = path.replace(/\\/g, '/').replace(/^database\//, '');
-    return `${this.base}/${normalized}`;
+    return this.auth(`${this.base}/${normalized}`);
   }
 }

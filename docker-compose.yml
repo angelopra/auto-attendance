@@ -1,21 +1,10 @@
-version: '3.9'
 services:
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+  api:
+    build: .
     ports:
-      - "8000:8000"
-    volumes:
-      - ./backend/database:/app/database
+      - '8223:8223'
     environment:
-      - DATABASE_URL=sqlite:///./database/kendo.db
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "4200:80"
-    depends_on:
-      - backend
+      - AUTH_TOKEN=${AUTH_TOKEN}
+    volumes:
+      - './database:/app/database'
+    restart: unless-stopped

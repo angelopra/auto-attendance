@@ -1,14 +1,21 @@
-<header>
-  <h1>Auto Attendance</h1>
-  <nav>
-    <button [class.active]="activeTab() === 'upload'" (click)="setTab('upload')">Upload Photo</button>
-    <button [class.active]="activeTab() === 'known'" (click)="setTab('known')">Known Faces</button>
-    <button [class.active]="activeTab() === 'attendance'" (click)="setTab('attendance')">Attendance</button>
-  </nav>
-</header>
+<div class="auth-wall" [class.hidden]="authorized()">
+  <div>Acesso não autorizado</div>
+  <div>Adicione <code>?auth=&lt;AUTH_TOKEN&gt;</code> na URL para acessar.</div>
+</div>
 
-<main>
-  <app-upload-photo [class.hidden]="activeTab() !== 'upload'" />
-  @if (activeTab() === 'known') { <app-known-faces /> }
-  @if (activeTab() === 'attendance') { <app-attendance /> }
-</main>
+@if (authorized()) {
+  <header>
+    <h1>Auto Attendance</h1>
+    <nav>
+      <button [class.active]="activeTab() === 'upload'" (click)="setTab('upload')">Upload Photo</button>
+      <button [class.active]="activeTab() === 'known'" (click)="setTab('known')">Known Faces</button>
+      <button [class.active]="activeTab() === 'attendance'" (click)="setTab('attendance')">Attendance</button>
+    </nav>
+  </header>
+
+  <main>
+    <app-upload-photo [class.hidden]="activeTab() !== 'upload'" />
+    @if (activeTab() === 'known') { <app-known-faces /> }
+    @if (activeTab() === 'attendance') { <app-attendance /> }
+  </main>
+}

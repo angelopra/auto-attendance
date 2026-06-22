@@ -67,6 +67,25 @@ button {
 
 .error { color: #dc2626; margin-top: 0.5rem; }
 
+.auth-wall {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 12px;
+  color: #dc2626;
+  font-size: 16px;
+
+  code {
+    background: #e5e7eb;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: #18181b;
+  }
+}
+
 .preview-img { max-width: 300px; border-radius: 8px; margin-top: 0.5rem; }
 
 .face-grid {

@@ -1,5 +1,5 @@
 """
-FastAPI application – Kendo Attendance System
+FastAPI application -- Kendo Attendance System
 """
 import json
 import os
@@ -8,8 +8,9 @@ import uuid
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, Depends, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
@@ -23,14 +24,23 @@ from face_utils import (
 )
 
 # ── Bootstrap ─────────────────────────────────────────────────────────────────
-Base.metadata.create_all(bind=engine)
+_startup_error = None
 
 UPLOAD_DIR = Path("database/uploads")
 PHOTOS_DIR = UPLOAD_DIR / "photos"
 SELFIES_DIR = UPLOAD_DIR / "selfies"
 FACES_DIR = UPLOAD_DIR / "faces"
-for d in [PHOTOS_DIR, SELFIES_DIR, FACES_DIR]:
-    d.mkdir(parents=True, exist_ok=True)
+
+try:
+    Base.metadata.create_all(bind=engine)
+
+    for d in [PHOTOS_DIR, SELFIES_DIR, FACES_DIR]:
+        d.mkdir(parents=True, exist_ok=True)
+
+    print("Ready — listening on http://0.0.0.0:8223")
+except Exception as e:
+    _startup_error = str(e)
+    print(f"Startup error: {_startup_error}")
 
 app = FastAPI(title="Kendo Attendance API")
 
@@ -40,6 +50,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def verify_auth(request: Request, call_next):
+    if _startup_error:
+        return JSONResponse(status_code=503, content={"error": f"Service unavailable: {_startup_error}"})
+    auth_token = os.environ.get("AUTH_TOKEN")
+    if not auth_token:
+        return JSONResponse(status_code=500, content={"error": "AUTH_TOKEN is not set"})
+    path = request.url.path
+    if path.startswith("/uploads") or path.startswith("/static"):
+        return await call_next(request)
+    if "." in path.split("/")[-1]:
+        return await call_next(request)
+    if request.query_params.get("auth") != auth_token:
+        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+    return await call_next(request)
+
 
 app.mount("/uploads", StaticFiles(directory="database/uploads"), name="uploads")
 
@@ -244,3 +272,17 @@ def get_detections_for_photo(photo_id: int, db: Session = Depends(get_db)):
 # TODO
 # - Delete GroupPhoto (so it deletes one whole date wit all its attendances)
 # - Create/Delete AttendanceDetection
+
+
+# -- SPA Static File Serving -------------------------------------------------
+
+STATIC_DIR = Path("static")
+
+if STATIC_DIR.exists():
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        file_path = STATIC_DIR / full_path
+        if file_path.is_file():
+            return FileResponse(file_path)
+        return FileResponse(STATIC_DIR / "index.html")
