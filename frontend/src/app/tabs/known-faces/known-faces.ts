@@ -17,7 +17,17 @@ export const unknownName = 'Unknown';
 export class KnownFaces implements OnInit {
   allPersons = signal<KnownPerson[]>([]);
   allKnownPersons = computed(() => this.uniquePersons().filter(p => p.name !== unknownName));
-  uniquePersons = computed(() => uniqBy(this.allPersons(), (p, i) => p.name === unknownName ? i : p.name));
+  uniquePersons = computed(() => uniqBy(this.allPersons(), (p, i) => p.name === unknownName ? i : p.name)
+    .sort((a, b) => {
+      if (a.name === unknownName && b.name !== unknownName) {
+        return 1;
+      }
+      if (b.name === unknownName && a.name !== unknownName) {
+        return -1;
+      }
+
+      return a.name.localeCompare(b.name);
+    }));
   newName = '';
   newSelfie: File | null = null;
   newPreview: string | null = null;

@@ -1,5 +1,5 @@
 # ── Database & uploads (runtime data) ─────────────────────────────────────────
-backend/database/
+database/
 
 # ── Python ─────────────────────────────────────────────────────────────────────
 backend/venv/
