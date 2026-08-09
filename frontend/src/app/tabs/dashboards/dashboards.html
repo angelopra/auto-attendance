@@ -1,0 +1,219 @@
+<section class="tab-panel dashboards">
+  <h2>{{ 'dashboards.title' | translate }}</h2>
+
+  <!-- One filter row, scoping everything below it -->
+  <div class="filter-row">
+    <div class="presets" role="group" [attr.aria-label]="'dashboards.timeRange' | translate">
+      <button type="button" [class.active]="preset() === 'all' && !customStart() && !customEnd()" (click)="setPreset('all')">
+        {{ 'dashboards.rangeAll' | translate }}
+      </button>
+      <button type="button" [class.active]="preset() === '30d' && !customStart()" (click)="setPreset('30d')">
+        {{ 'dashboards.range30d' | translate }}
+      </button>
+      <button type="button" [class.active]="preset() === '90d' && !customStart()" (click)="setPreset('90d')">
+        {{ 'dashboards.range90d' | translate }}
+      </button>
+      <button type="button" [class.active]="preset() === '12m' && !customStart()" (click)="setPreset('12m')">
+        {{ 'dashboards.range12m' | translate }}
+      </button>
+    </div>
+
+    <div class="custom-range">
+      <label>{{ 'dashboards.from' | translate }}
+        <input type="date" [value]="customStart()" (input)="onCustomStart($event)" />
+      </label>
+      <label>{{ 'dashboards.to' | translate }}
+        <input type="date" [value]="customEnd()" (input)="onCustomEnd($event)" />
+      </label>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <p class="muted">{{ 'common.loading' | translate }}</p>
+  } @else if (error()) {
+    <p class="error">{{ error() }}</p>
+  } @else if (!hasData()) {
+    <p class="muted">{{ 'dashboards.empty' | translate }}</p>
+  } @else {
+
+    <!-- Hero + KPI row -->
+    <div class="card hero-card">
+      <div class="hero">
+        <span class="hero-label">{{ 'dashboards.heroLabel' | translate }}</span>
+        <span class="hero-value">{{ oneDecimal(averageAttendance()) }}</span>
+        <span class="hero-meta">
+          {{ 'dashboards.heroMeta' | translate: { count: sessions().length, range: rangeLabel() } }}
+        </span>
+        @if (averageDelta() !== null) {
+          <span class="delta" [class.up]="averageDelta()! >= 0" [class.down]="averageDelta()! < 0">
+            {{ 'dashboards.heroDelta' | translate: { delta: signed(averageDelta()!) } }}
+          </span>
+        }
+      </div>
+
+      <div class="kpi-row">
+        <div class="stat-tile">
+          <span class="stat-label">{{ 'dashboards.tileSessions' | translate }}</span>
+          <span class="stat-value">{{ sessions().length }}</span>
+        </div>
+        <div class="stat-tile">
+          <span class="stat-label">{{ 'dashboards.tilePeople' | translate }}</span>
+          <span class="stat-value">{{ activeStats().length }}</span>
+          <span class="stat-meta">{{ 'dashboards.tilePeopleMeta' | translate: { count: stats().length } }}</span>
+        </div>
+        <div class="stat-tile">
+          <span class="stat-label">{{ 'dashboards.tileRate' | translate }}</span>
+          <span class="stat-value">{{ percent(attendanceRate()) }}</span>
+          <span class="stat-meta">{{ 'dashboards.tileRateMeta' | translate }}</span>
+        </div>
+        <div class="stat-tile">
+          <span class="stat-label">{{ 'dashboards.tileBest' | translate }}</span>
+          <span class="stat-value">{{ bestSession()?.count }}</span>
+          <span class="stat-meta">{{ bestSession()?.date | localizedDate }}</span>
+        </div>
+        <div class="stat-tile">
+          <span class="stat-label">{{ 'dashboards.tileNew' | translate }}</span>
+          <span class="stat-value">{{ newPeople().length }}</span>
+          <span class="stat-meta">{{ 'dashboards.tileNewMeta' | translate }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="card">
+      <app-line-chart
+        [points]="perSessionPoints()"
+        [title]="perSessionTitle()"
+        [subtitle]="perSessionSubtitle()"
+        [categoryLabel]="perSessionCategory()"
+        [valueLabel]="perSessionValue()" />
+    </div>
+
+    <div class="chart-grid">
+      <div class="card">
+        <app-bar-chart
+          [points]="weekdayPoints()"
+          [title]="weekdayTitle()"
+          [subtitle]="weekdaySubtitle()"
+          [categoryLabel]="weekdayCategory()"
+          [valueLabel]="averagePeople()" />
+      </div>
+
+      <div class="card">
+        <app-bar-chart
+          [points]="monthlyPoints()"
+          [title]="monthTitle()"
+          [subtitle]="monthSubtitle()"
+          [categoryLabel]="monthCategory()"
+          [valueLabel]="averagePeople()" />
+      </div>
+    </div>
+
+    <div class="card">
+      <app-bar-chart
+        [points]="distributionPoints()"
+        [title]="distributionTitle()"
+        [subtitle]="distributionSubtitle()"
+        [categoryLabel]="distributionCategory()"
+        [valueLabel]="peopleLabel()" />
+    </div>
+
+    <!-- Ranked tables -->
+    <div class="card">
+      <div class="card-head">
+        <h3>{{ 'dashboards.rankingTitle' | translate }}</h3>
+        @if (ranked().length > 10) {
+          <button type="button" class="link-btn" (click)="showAllAttendees.set(!showAllAttendees())">
+            {{ showAllAttendees()
+              ? ('dashboards.showTop10' | translate)
+              : ('dashboards.showAll' | translate: { count: ranked().length }) }}
+          </button>
+        }
+      </div>
+
+      <div class="table-wrapper">
+        <table class="rank-table">
+          <thead>
+            <tr>
+              <th class="rank-col">#</th>
+              <th>{{ 'attendance.person' | translate }}</th>
+              <th class="num">{{ 'dashboards.colSessions' | translate }}</th>
+              <th class="rate-col">{{ 'dashboards.colRate' | translate }}</th>
+              <th class="num hide-sm">{{ 'dashboards.colStreak' | translate }}</th>
+              <th class="hide-sm">{{ 'dashboards.colLastSeen' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (stat of topAttendees(); track stat.person.id; let i = $index) {
+              <tr>
+                <td class="rank-col">{{ i + 1 }}</td>
+                <td class="person-cell">
+                  <div class="person-inner">
+                    @if (stat.person.selfie_path) {
+                      <img [src]="selfieUrl(stat.person.selfie_path)" alt="" class="thumb-sm" loading="lazy" />
+                    }
+                    <span class="name-text">{{ stat.person.name }}</span>
+                    @if (stat.manual) {
+                      <span class="edit-mark" [title]="manualTitle(stat)" aria-hidden="true">&#9998;</span>
+                    }
+                  </div>
+                </td>
+                <td class="num">{{ stat.attended }}</td>
+                <td class="rate-col">
+                  <div class="rate-inner">
+                    <div class="meter" [attr.aria-label]="percent(stat.rate)">
+                      <div class="meter-fill" [style.width.%]="stat.rate * 100"></div>
+                    </div>
+                    <span class="meter-value">{{ percent(stat.rate) }}</span>
+                  </div>
+                </td>
+                <td class="num hide-sm">{{ stat.currentStreak }}</td>
+                <td class="hide-sm">{{ stat.lastSeen | localizedDate }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="card">
+        <h3>{{ 'dashboards.absentTitle' | translate }}</h3>
+        <p class="muted small">{{ 'dashboards.absentSubtitle' | translate }}</p>
+        @if (absentLately().length === 0) {
+          <p class="muted small">{{ 'dashboards.absentNone' | translate }}</p>
+        } @else {
+          <ul class="plain-list">
+            @for (stat of absentLately(); track stat.person.id) {
+              <li>
+                <span class="status" [class.warning]="absenceSeverity(stat.missedInARow) === 'warning'"
+                      [class.critical]="absenceSeverity(stat.missedInARow) === 'critical'">
+                  <span class="status-icon" aria-hidden="true">!</span>
+                  <span class="status-label">{{ absenceLabel(stat.missedInARow) }}</span>
+                </span>
+                <span class="who">{{ stat.person.name }}</span>
+                <span class="muted small">{{ absenceMeta(stat) }}</span>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+
+      <div class="card">
+        <h3>{{ 'dashboards.streaksTitle' | translate }}</h3>
+        <p class="muted small">{{ 'dashboards.streaksSubtitle' | translate }}</p>
+        <ul class="plain-list">
+          @for (stat of longestStreaks(); track stat.person.id) {
+            <li>
+              <span class="streak-badge">{{ stat.longestStreak }}</span>
+              <span class="who">{{ stat.person.name }}</span>
+              <span class="muted small">
+                {{ 'dashboards.currentStreak' | translate: { count: stat.currentStreak } }}
+              </span>
+            </li>
+          }
+        </ul>
+      </div>
+    </div>
+  }
+</section>

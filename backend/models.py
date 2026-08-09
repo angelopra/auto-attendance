@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, LargeBinary, DateTime, Text
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, LargeBinary, DateTime, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -16,6 +16,11 @@ class KnownPerson(Base):
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
     detections = relationship("AttendanceDetection", back_populates="person")
+    manual_attendances = relationship(
+        "ManualAttendance",
+        back_populates="person",
+        cascade="all, delete-orphan",
+    )
 
 
 class GroupPhoto(Base):
@@ -27,6 +32,8 @@ class GroupPhoto(Base):
     photo_path = Column(String, nullable=False)
     date = Column(Date, nullable=False)
     uploaded_at = Column(DateTime, default=datetime.datetime.utcnow)
+    # Set when the date was corrected by hand, so edited sessions can be flagged.
+    date_edited_at = Column(DateTime, nullable=True)
 
     detections = relationship("AttendanceDetection", back_populates="photo")
 
@@ -44,3 +51,30 @@ class AttendanceDetection(Base):
 
     photo = relationship("GroupPhoto", back_populates="detections")
     person = relationship("KnownPerson", back_populates="detections")
+
+
+class ManualAttendance(Base):
+    """A presence registered by hand, without a face in a group photo."""
+    __tablename__ = "manual_attendances"
+    __table_args__ = (UniqueConstraint("person_id", "date", name="uq_manual_person_date"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    person_id = Column(Integer, ForeignKey("known_persons.id"), nullable=False)
+    date = Column(Date, nullable=False, index=True)
+    note = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    person = relationship("KnownPerson", back_populates="manual_attendances")
+
+
+class AuditLog(Base):
+    """Trail of every by-hand change, so manipulated data stays identifiable."""
+    __tablename__ = "audit_log"
+
+    id = Column(Integer, primary_key=True, index=True)
+    action = Column(String, nullable=False)            # e.g. presence_added, photo_deleted
+    person_id = Column(Integer, nullable=True)         # not a FK: survives person deletion
+    person_name = Column(String, nullable=True)
+    date = Column(Date, nullable=True)                 # attendance date the change refers to
+    details = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)

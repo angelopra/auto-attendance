@@ -1,0 +1,160 @@
+<section class="tab-panel">
+  <h2>{{ 'manage.title' | translate }}</h2>
+
+  @if (message()) { <p class="notice">{{ message() }}</p> }
+  @if (error()) { <p class="error">{{ error() }}</p> }
+
+  <!-- ── Backup ───────────────────────────────────────────────────────── -->
+  <div class="card backup-card">
+    <h3>{{ 'manage.backupTitle' | translate }}</h3>
+    <p class="muted">{{ 'manage.backupIntro' | translate: { folder: 'database' } }}</p>
+
+    <div class="backup-row">
+      <label class="inline-field">
+        {{ 'manage.backupFormat' | translate }}
+        <select [value]="backupFormat()" (change)="onFormatChange($event)">
+          <option value="tar.gz">{{ 'manage.backupTarGz' | translate }}</option>
+          <option value="zip">{{ 'manage.backupZip' | translate }}</option>
+        </select>
+      </label>
+
+      <a class="btn-link" [href]="backupHref()" download>{{ 'manage.backupDownload' | translate }}</a>
+    </div>
+
+    <p class="hint">
+      {{ (backupFormat() === 'tar.gz' ? 'manage.backupHintTarGz' : 'manage.backupHintZip') | translate }}
+    </p>
+
+    @if (backupInfo(); as info) {
+      <p class="muted small">
+        {{ 'manage.backupSize' | translate: { count: info.file_count, size: humanSize(info.total_bytes) } }}
+      </p>
+    }
+  </div>
+
+  <!-- ── Sessions ─────────────────────────────────────────────────────── -->
+  <div class="card">
+    <h3>{{ 'manage.sessionsTitle' | translate }}</h3>
+    <p class="muted">{{ 'manage.sessionsIntro' | translate }}</p>
+
+    @if (photos().length > 0) {
+      <label class="session-search">
+        {{ 'manage.sessionSearch' | translate }}
+        <input type="search" [placeholder]="'manage.sessionSearchPlaceholder' | translate"
+               [value]="sessionFilter()" (input)="onSessionFilter($event)" />
+      </label>
+    }
+
+    @if (photos().length === 0) {
+      <p>{{ 'manage.noPhotos' | translate }}</p>
+    } @else if (sessions().length === 0) {
+      <p class="muted small">{{ 'manage.noMatch' | translate: { term: sessionFilter() } }}</p>
+    }
+
+    @for (session of sessions(); track session.date) {
+      <div class="session">
+        <div class="session-head">
+          <span class="session-date">{{ session.date | localizedDate }}</span>
+          <span class="muted small">{{ 'manage.photoCount' | translate: { count: session.photos.length } }}</span>
+          @if (session.edited) {
+            <span class="badge edited">{{ 'manage.dateEdited' | translate }}</span>
+          }
+        </div>
+
+        @for (photo of session.photos; track photo.id) {
+          <div class="photo-row">
+            <img class="photo-thumb" [src]="imageUrl(photo.photo_path)" alt="" loading="lazy" />
+
+            <div class="photo-info">
+              <span class="filename">{{ photo.filename }}</span>
+              <span class="muted small">
+                {{ 'manage.uploadedAt' | translate: { when: photo.uploaded_at | localizedDateTime } }}
+              </span>
+            </div>
+
+            @if (editingPhotoId() === photo.id) {
+              <div class="photo-actions">
+                <input type="date" [value]="editingDate()" (input)="onEditingDateInput($event)" />
+                <button type="button" (click)="saveDate(photo)" [disabled]="busy()">
+                  {{ 'common.save' | translate }}
+                </button>
+                <button type="button" class="btn-outline" (click)="cancelEditDate()">
+                  {{ 'common.cancel' | translate }}
+                </button>
+              </div>
+            } @else {
+              <div class="photo-actions">
+                <button type="button" class="btn-sm btn-outline" (click)="toggleDetections(photo)">
+                  {{ (expandedPhotoId() === photo.id ? 'manage.hideFaces' : 'manage.faces') | translate }}
+                </button>
+                <button type="button" class="btn-sm" (click)="startEditDate(photo)">
+                  {{ 'manage.changeDate' | translate }}
+                </button>
+                <button type="button" class="btn-sm danger" (click)="deletePhoto(photo)" [disabled]="busy()">
+                  {{ 'common.delete' | translate }}
+                </button>
+              </div>
+            }
+          </div>
+
+          @if (expandedPhotoId() === photo.id) {
+            <div class="detections">
+              @if (loadingDetections()) {
+                <p class="muted small">{{ 'manage.loadingFaces' | translate }}</p>
+              } @else if (detections().length === 0) {
+                <p class="muted small">{{ 'manage.noFaces' | translate }}</p>
+              } @else {
+                <div class="face-grid">
+                  @for (d of detections(); track d.id) {
+                    <div class="face-card">
+                      @if (d.face_crop_path) {
+                        <img [src]="imageUrl(d.face_crop_path)" alt="" loading="lazy" />
+                      }
+                      <span>{{ d.person?.name ?? ('common.unknown' | translate) }}</span>
+                      @if (d.confidence) { <small>{{ (+d.confidence * 100).toFixed(1) }}%</small> }
+                      <button type="button" class="btn-sm danger" (click)="deleteDetection(d)" [disabled]="busy()">
+                        {{ 'manage.removeFace' | translate }}
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        }
+      </div>
+    }
+
+    @if (hiddenSessions() > 0) {
+      <button type="button" class="btn-outline show-more" (click)="showMoreSessions()">
+        {{ 'manage.showOlder' | translate: { count: hiddenSessions() } }}
+      </button>
+    }
+  </div>
+
+  <!-- ── Audit ────────────────────────────────────────────────────────── -->
+  <div class="card">
+    <h3>{{ 'manage.auditTitle' | translate }}</h3>
+    <p class="muted">{{ 'manage.auditIntro' | translate }}</p>
+
+    @if (audit().length === 0) {
+      <p class="muted small">{{ 'manage.auditEmpty' | translate }}</p>
+    } @else {
+      <ul class="audit-list">
+        @for (entry of audit(); track entry.id) {
+          <li class="audit-item" [class.add]="actionKind(entry.action) === 'add'"
+              [class.remove]="actionKind(entry.action) === 'remove'"
+              [class.move]="actionKind(entry.action) === 'move'">
+            <div class="audit-head">
+              <span class="audit-action">{{ actionLabel(entry.action) }}</span>
+              @if (entry.person_name) { <span class="audit-person">{{ entry.person_name }}</span> }
+              @if (entry.date) { <span class="badge">{{ entry.date | localizedDate }}</span> }
+            </div>
+            @if (entry.details) { <div class="audit-details">{{ entry.details }}</div> }
+            <div class="muted small">{{ entry.created_at | localizedDateTime }}</div>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</section>

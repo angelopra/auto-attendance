@@ -1,40 +1,52 @@
 <section class="tab-panel">
-  <h2>Upload Group Photo</h2>
+  <h2>{{ 'upload.title' | translate }}</h2>
 
   <div class="form-row">
-    <label>Date
-      <input type="date" [(ngModel)]="date" />
+    <label>{{ 'upload.date' | translate }}
+      <input type="date" [value]="date()" (input)="onDateChange($event)" />
     </label>
   </div>
 
   <div class="form-row">
-    <label>Photo
+    <label>{{ 'upload.photo' | translate }}
       <input type="file" accept="image/*" (change)="onFileChange($event)" />
     </label>
-    @if (preview) {
-      <img [src]="preview" alt="Preview" class="preview-img" />
-    }
   </div>
 
+  @if (preview(); as previewSrc) {
+    <figure class="photo-preview">
+      <a [href]="previewSrc" target="_blank" rel="noopener">
+        <img [src]="previewSrc" [alt]="'upload.previewAlt' | translate" />
+      </a>
+      <figcaption>
+        <span class="file-name">{{ fileName() }}</span>
+        <span class="hint">{{ 'upload.previewHint' | translate }}</span>
+        <button type="button" class="btn-outline btn-sm" (click)="clearSelection()">
+          {{ 'upload.remove' | translate }}
+        </button>
+      </figcaption>
+    </figure>
+  }
+
   <button (click)="upload()" [disabled]="uploading()">
-    {{ uploading() ? 'Uploading...' : 'Upload & Process' }}
+    {{ (uploading() ? 'upload.submitting' : 'upload.submit') | translate }}
   </button>
 
   @if (error()) {
     <p class="error">{{ error() }}</p>
   }
 
-  @if (uploadedPhoto()) {
+  @if (uploadedPhoto(); as photo) {
     <div class="result">
-      <h3>Processed: {{ uploadedPhoto()!.date }}</h3>
-      <p>{{ detections().length }} face(s) detected.</p>
+      <h3>{{ 'upload.processed' | translate: { date: photo.date | localizedDate } }}</h3>
+      <p>{{ 'upload.facesDetected' | translate: { count: detections().length } }}</p>
       <div class="face-grid">
         @for (d of detections(); track d.id) {
           <div class="face-card">
             @if (d.face_crop_path) {
-              <img [src]="faceUrl(d.face_crop_path)" alt="Face" />
+              <img [src]="faceUrl(d.face_crop_path)" alt="" />
             }
-            <span>{{ d.person?.name ?? 'Unknown' }}</span>
+            <span>{{ d.person?.name ?? ('common.unknown' | translate) }}</span>
             @if (d.confidence) {
               <small>{{ (+d.confidence * 100).toFixed(1) }}%</small>
             }

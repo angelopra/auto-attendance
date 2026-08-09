@@ -1,66 +1,110 @@
-﻿<section class="tab-panel">
-  <h2>Attendance</h2>
+<section class="tab-panel">
+  <h2>{{ 'attendance.title' | translate }}</h2>
 
-  <div class="attendance-controls" style="display: flex; justify-content: space-between; margin-bottom: 1rem; align-items: flex-end;">
+  <div class="attendance-controls">
     <form [formGroup]="filterForm" class="filter-bar">
       <div class="input-group">
-        <label for="searchName">Person Name</label>
-        <input id="searchName" type="text" formControlName="searchName" placeholder="Search..." />
+        <label for="searchName">{{ 'attendance.searchName' | translate }}</label>
+        <input id="searchName" type="text" formControlName="searchName"
+               [placeholder]="'attendance.searchPlaceholder' | translate" />
       </div>
 
       <div class="input-group">
-        <label for="startDate">From</label>
+        <label for="startDate">{{ 'attendance.from' | translate }}</label>
         <input id="startDate" type="date" formControlName="startDate" />
       </div>
 
       <div class="input-group">
-        <label for="endDate">To</label>
+        <label for="endDate">{{ 'attendance.to' | translate }}</label>
         <input id="endDate" type="date" formControlName="endDate" />
       </div>
 
-      <button type="button" class="btn-secondary" (click)="resetFilters()">Clear</button>
+      <button type="button" class="btn-secondary" (click)="resetFilters()">
+        {{ 'common.clear' | translate }}
+      </button>
     </form>
 
-    <div style="display: flex; gap: 0.5rem; align-items: center;">
-      <button type="button" class="btn-success" (click)="exportToExcel()" style="background-color: #2e7d32; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">
-        Export Excel
+    <div class="action-bar">
+      <button type="button" class="btn-success" (click)="exportToExcel()">
+        {{ 'attendance.export' | translate }}
       </button>
 
-      @if (filteredDates().length > 5) {
-        <div class="pagination-buttons" style="display: flex; gap: 0.5rem;">
-          <button (click)="prevDays()" [disabled]="dateStartIndex() === 0">&larr; Prev</button>
-          <button (click)="nextDays()" [disabled]="dateStartIndex() + 5 >= filteredDates().length">Next &rarr;</button>
+      <button type="button" [class.btn-outline]="!editMode()" (click)="toggleEditMode()">
+        {{ (editMode() ? 'attendance.doneEditing' : 'attendance.edit') | translate }}
+      </button>
+
+      @if (filteredDates().length > pageSize()) {
+        <div class="pagination-buttons">
+          <button type="button" (click)="prevDays()" [disabled]="dateStartIndex() === 0"
+                  [attr.aria-label]="'attendance.prevDates' | translate">&larr;</button>
+          <button type="button" (click)="nextDays()" [disabled]="!canGoNext()"
+                  [attr.aria-label]="'attendance.nextDates' | translate">&rarr;</button>
         </div>
       }
     </div>
   </div>
 
+  @if (editMode()) {
+    <div class="edit-panel">
+      <p class="edit-hint">{{ 'attendance.editHint' | translate }}</p>
+      <div class="edit-row">
+        <label for="newDate">{{ 'attendance.showAnotherDate' | translate }}</label>
+        <input id="newDate" type="date" [value]="newDate()" (input)="onNewDateInput($event)" />
+        <button type="button" (click)="addDateColumn()" [disabled]="!newDate()">
+          {{ 'attendance.addColumn' | translate }}
+        </button>
+      </div>
+    </div>
+  }
+
+  <p class="legend">
+    <span class="edit-mark" aria-hidden="true">&#9998;</span>
+    {{ 'attendance.legendEdited' | translate }}
+  </p>
+
+  @if (message()) { <p class="notice">{{ message() }}</p> }
+  @if (error()) { <p class="error">{{ error() }}</p> }
+
   @if (visibleDates().length === 0) {
-    <p>No data yet. Upload a group photo first or adjust your filters.</p>
+    <p>{{ 'attendance.empty' | translate }}</p>
   } @else {
     <div class="table-wrapper">
-      <table>
+      <table class="attendance-table" [class.editing]="editMode()">
         <thead>
           <tr>
-            <th>Person</th>
+            <th class="sticky-col">{{ 'attendance.person' | translate }}</th>
             @for (date of visibleDates(); track date) {
-              <th>{{ date }}</th>
+              <th class="date-col">{{ date | localizedDate }}</th>
             }
           </tr>
         </thead>
         <tbody>
           @for (row of filteredRows(); track row.person.id) {
             <tr>
-              <td class="person-cell">
+              <td class="person-cell sticky-col">
                 @if (row.person.selfie_path) {
                   <img [src]="selfieUrl(row.person.selfie_path)" alt="" class="thumb-sm" />
                 }
-                {{ row.person.name }}
+                <span class="name-text">{{ row.person.name }}</span>
               </td>
               @for (date of visibleDates(); track date) {
-                @let wasPresent_ = wasPresent(row, date);
-                <td [class.present]="wasPresent_" [class.absent]="!wasPresent_">
-                  @if (wasPresent_) { &#10003; }
+                @let present = wasPresent(row, date);
+                @let edited = wasEdited(row, date);
+                <td class="date-col"
+                  [class.present]="present"
+                  [class.absent]="!present"
+                  [class.edited]="edited"
+                  [class.clickable]="editMode()"
+                  [attr.title]="cellTitle(row, date)"
+                  (click)="togglePresence(row, date)">
+                  @if (present) {
+                    <span class="mark">&#10003;</span>
+                  } @else if (editMode()) {
+                    <span class="add-mark">+</span>
+                  }
+                  @if (edited) {
+                    <span class="edit-mark" aria-hidden="true">&#9998;</span>
+                  }
                 </td>
               }
             </tr>

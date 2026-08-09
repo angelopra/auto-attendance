@@ -1,21 +1,34 @@
 <div class="auth-wall" [class.hidden]="authorized()">
-  <div>Acesso não autorizado</div>
-  <div>Adicione <code>?auth=&lt;AUTH_TOKEN&gt;</code> na URL para acessar.</div>
+  <div>{{ 'auth.denied' | translate }}</div>
+  <div>{{ 'auth.hint' | translate: authHintParams }}</div>
 </div>
 
 @if (authorized()) {
   <header>
-    <h1>Auto Attendance</h1>
-    <nav>
-      <button [class.active]="activeTab() === 'upload'" (click)="setTab('upload')">Upload Photo</button>
-      <button [class.active]="activeTab() === 'known'" (click)="setTab('known')">Known Faces</button>
-      <button [class.active]="activeTab() === 'attendance'" (click)="setTab('attendance')">Attendance</button>
+    <h1>{{ 'app.title' | translate }}</h1>
+    <nav [attr.aria-label]="'app.title' | translate">
+      @for (tab of tabs; track tab.id) {
+        <button
+          type="button"
+          [class.active]="activeTab() === tab.id"
+          [attr.aria-current]="activeTab() === tab.id ? 'page' : null"
+          (click)="setTab(tab.id)">{{ tab.labelKey | translate }}</button>
+      }
     </nav>
+
+    <select class="lang-select" [value]="language()" (change)="setLanguage($event)"
+            [attr.aria-label]="'language.label' | translate">
+      @for (lang of languages; track lang) {
+        <option [value]="lang">{{ 'language.' + lang | translate }}</option>
+      }
+    </select>
   </header>
 
   <main>
     <app-upload-photo [class.hidden]="activeTab() !== 'upload'" />
     @if (activeTab() === 'known') { <app-known-faces /> }
     @if (activeTab() === 'attendance') { <app-attendance /> }
+    @if (activeTab() === 'dashboards') { <app-dashboards /> }
+    @if (activeTab() === 'manage') { <app-manage /> }
   </main>
 }

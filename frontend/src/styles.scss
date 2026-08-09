@@ -1,23 +1,41 @@
 *, *::before, *::after { box-sizing: border-box; }
 
+html { -webkit-text-size-adjust: 100%; }
+
 body {
   margin: 0;
   font-family: system-ui, sans-serif;
   background: #f4f4f5;
   color: #18181b;
+  overflow-x: hidden;
 }
+
+img { max-width: 100%; }
 
 header {
   background: #1e3a5f;
   color: #fff;
-  padding: 1rem 2rem;
+  padding: 0.75rem 1.5rem;
   display: flex;
   align-items: center;
-  gap: 2rem;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 50;
 
-  h1 { margin: 0; font-size: 1.4rem; }
+  h1 { margin: 0; font-size: 1.25rem; white-space: nowrap; }
 
-  nav { display: flex; gap: 0.5rem; }
+  nav {
+    display: flex;
+    gap: 0.5rem;
+    flex: 1 1 auto;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+
+    &::-webkit-scrollbar { display: none; }
+  }
 
   button {
     background: transparent;
@@ -27,13 +45,27 @@ header {
     border-radius: 6px;
     cursor: pointer;
     font-size: 0.95rem;
+    white-space: nowrap;
     transition: background 0.15s;
 
     &.active, &:hover { background: rgba(255,255,255,0.2); border-color: #fff; }
   }
+
+  .lang-select {
+    flex: none;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.4);
+    color: #fff;
+    border-radius: 6px;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+
+    option { color: #18181b; }
+  }
 }
 
-main { padding: 2rem; max-width: 1200px; margin: 0 auto; }
+main { padding: 1.5rem; max-width: 1200px; margin: 0 auto; }
 
 .tab-panel { animation: fadeIn 0.2s ease; }
 
@@ -45,11 +77,12 @@ h2 { margin-top: 0; }
 
 label { display: flex; flex-direction: column; gap: 0.25rem; font-weight: 500; }
 
-input[type=text], input[type=date], select {
+input[type=text], input[type=date], input[type=file], select {
   padding: 0.45rem 0.7rem;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: 1rem;
+  max-width: 100%;
 }
 
 button {
@@ -60,9 +93,10 @@ button {
   color: #fff;
   cursor: pointer;
   font-size: 0.95rem;
+  min-height: 40px;
   &:hover:not(:disabled) { background: #2d5490; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
-  &.danger { background: #dc2626; &:hover { background: #b91c1c; } }
+  &.danger { background: #dc2626; &:hover:not(:disabled) { background: #b91c1c; } }
 }
 
 .error { color: #dc2626; margin-top: 0.5rem; }
@@ -74,6 +108,8 @@ button {
   justify-content: center;
   height: 100vh;
   gap: 12px;
+  padding: 1rem;
+  text-align: center;
   color: #dc2626;
   font-size: 16px;
 
@@ -83,21 +119,23 @@ button {
     border-radius: 4px;
     font-size: 13px;
     color: #18181b;
+    word-break: break-all;
   }
 }
 
-.preview-img { max-width: 300px; border-radius: 8px; margin-top: 0.5rem; }
-
 .face-grid {
-  display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
 
   .face-card {
     display: flex; flex-direction: column; align-items: center; gap: 0.25rem;
     background: #fff; border-radius: 8px; padding: 0.5rem;
     box-shadow: 0 1px 4px rgba(0,0,0,0.1);
 
-    img { width: 90px; height: 90px; object-fit: cover; border-radius: 6px; }
-    span { font-size: 0.85rem; font-weight: 600; }
+    img { width: 100%; aspect-ratio: 1; max-width: 90px; object-fit: cover; border-radius: 6px; }
+    span { font-size: 0.85rem; font-weight: 600; text-align: center; word-break: break-word; }
     small { color: #6b7280; font-size: 0.75rem; }
   }
 }
@@ -113,21 +151,23 @@ button {
 .no-photo { width: 80px; height: 80px; background: #e5e7eb; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #9ca3af; }
 
 .person-grid {
-  display: flex; flex-wrap: wrap; gap: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1rem;
 
   .person-card {
     background: #fff; border-radius: 10px; padding: 0.75rem;
     box-shadow: 0 1px 4px rgba(0,0,0,0.08);
     display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
-    min-width: 140px;
+    min-width: 0;
 
     &.selected { outline: 2px solid #1e3a5f; }
 
-    .name { font-weight: 600; font-size: 0.9rem; }
+    .name { font-weight: 600; font-size: 0.9rem; text-align: center; word-break: break-word; }
   }
 }
 
-.table-wrapper { overflow-x: auto; margin-top: 1rem; }
+.table-wrapper { overflow-x: auto; margin-top: 1rem; -webkit-overflow-scrolling: touch; }
 
 table {
   border-collapse: collapse; width: 100%; background: #fff;
@@ -141,4 +181,41 @@ table {
   td.absent { color: #e5e7eb; }
   tr:last-child td { border-bottom: none; }
   tr:hover td { background: #f9fafb; }
+}
+
+/* ── Touch & small screens ─────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  main { padding: 1rem; }
+}
+
+@media (max-width: 640px) {
+  header {
+    padding: 0.6rem 0.9rem;
+    gap: 0.6rem;
+
+    h1 { font-size: 1.05rem; flex: 1 1 auto; }
+
+    nav {
+      flex: 1 1 100%;
+      /* Bleed the scroll strip to the screen edges so it reads as scrollable. */
+      margin: 0 -0.9rem;
+      padding: 0 0.9rem 0.15rem;
+    }
+
+    button { padding: 0.4rem 0.8rem; font-size: 0.88rem; }
+  }
+
+  main { padding: 0.85rem; }
+
+  .card { padding: 1rem; margin-bottom: 1rem; border-radius: 8px; }
+
+  h2 { font-size: 1.25rem; }
+
+  /* 16px keeps iOS Safari from zooming in when a field is focused. */
+  input[type=text], input[type=date], input[type=file], select { font-size: 16px; }
+
+  button { min-height: 44px; }
+
+  .thumb { width: 64px; height: 64px; }
+  .no-photo { width: 64px; height: 64px; }
 }

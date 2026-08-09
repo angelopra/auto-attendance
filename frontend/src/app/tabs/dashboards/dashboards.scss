@@ -1,0 +1,304 @@
+.muted { color: #52514e; }
+.small { font-size: 0.82rem; }
+h3 { margin: 0 0 0.15rem; font-size: 1rem; }
+
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.link-btn {
+  background: transparent;
+  color: #1c5cab;
+  border: none;
+  padding: 0.2rem 0;
+  font-size: 0.82rem;
+  text-decoration: underline;
+  min-height: 32px;
+
+  &:hover { background: transparent; color: #0d366b; }
+}
+
+/* ── Filter row ─────────────────────────────────────────────────────────── */
+.filter-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.presets {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+
+  button {
+    background: #fff;
+    color: #52514e;
+    border: 1px solid #e1e0d9;
+    font-size: 0.82rem;
+    padding: 0.35rem 0.7rem;
+    min-height: 38px;
+
+    &:hover:not(:disabled) { background: #f0efec; }
+
+    &.active {
+      background: #1e3a5f;
+      border-color: #1e3a5f;
+      color: #fff;
+    }
+  }
+}
+
+.custom-range {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+
+  label {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.82rem;
+    color: #52514e;
+  }
+
+  input { font-size: 0.85rem; padding: 0.35rem 0.5rem; }
+}
+
+/* ── Hero + KPIs ────────────────────────────────────────────────────────── */
+.hero-card { gap: 1.25rem; }
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+
+  .hero-label { font-size: 0.85rem; color: #52514e; }
+
+  .hero-value {
+    font-size: 3rem;
+    font-weight: 600;
+    line-height: 1.05;
+    color: #0b0b0b;
+  }
+
+  .hero-meta { font-size: 0.82rem; color: #898781; }
+
+  .delta {
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin-top: 0.2rem;
+
+    &.up { color: #006300; }
+    &.down { color: #d03b3b; }
+  }
+}
+
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.stat-tile {
+  background: #f9f9f7;
+  border: 1px solid #e1e0d9;
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  .stat-label { font-size: 0.75rem; color: #52514e; }
+  .stat-value { font-size: 1.5rem; font-weight: 600; line-height: 1.15; }
+  .stat-meta { font-size: 0.72rem; color: #898781; }
+}
+
+/* ── Charts ─────────────────────────────────────────────────────────────── */
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+
+  .card { margin-bottom: 0; }
+}
+
+/* ── Ranked table ───────────────────────────────────────────────────────── */
+.table-wrapper { overflow-x: auto; margin-top: 0.5rem; }
+
+table.rank-table {
+  width: 100%;
+  border-collapse: collapse;
+  box-shadow: none;
+  font-size: 0.88rem;
+
+  th, td {
+    padding: 0.45rem 0.6rem;
+    border-bottom: 1px solid #e1e0d9;
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  th {
+    background: transparent;
+    color: #52514e;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  .rank-col { width: 2rem; color: #898781; font-variant-numeric: tabular-nums; }
+
+  /* The flex box lives inside the cell, never on the `td` itself — a flex `td`
+     leaves the table's layout and its content stops sitting in the row box. */
+  .person-cell .person-inner {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+
+    .thumb-sm { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; margin: 0; flex: none; }
+    .name-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  }
+
+  /* Same pen marker the attendance grid uses for hand-edited data. */
+  .edit-mark {
+    color: #b3461c;
+    font-size: 0.72rem;
+    line-height: 1;
+    cursor: help;
+  }
+
+  .rate-col { min-width: 120px; }
+
+  .rate-col .rate-inner {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .meter {
+    flex: 1 1 auto;
+    height: 8px;
+    background: #cde2fb;
+    border-radius: 999px;
+    overflow: hidden;
+    min-width: 48px;
+  }
+
+  .meter-fill { height: 100%; background: #2a78d6; border-radius: 999px; }
+  .meter-value { font-size: 0.78rem; color: #52514e; font-variant-numeric: tabular-nums; }
+
+  tr:hover td { background: #f9f9f7; }
+}
+
+/* ── Lists ──────────────────────────────────────────────────────────────── */
+.plain-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-size: 0.88rem;
+  }
+
+  .who { font-weight: 600; }
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+
+  .status-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 0.65rem;
+    line-height: 1;
+  }
+
+  &.warning {
+    background: #fdf2d9;
+    color: #7a5300;
+    .status-icon { background: #fab219; color: #3d2a00; }
+  }
+
+  &.critical {
+    background: #fbe6e6;
+    color: #96201f;
+    .status-icon { background: #d03b3b; }
+  }
+}
+
+.streak-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: #eaf2fd;
+  color: #1c5cab;
+  font-weight: 700;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+  .hero .hero-value { font-size: 2.4rem; }
+
+  .filter-row { gap: 0.5rem; }
+
+  .presets {
+    width: 100%;
+    button { flex: 1 1 42%; }
+  }
+
+  .custom-range {
+    width: 100%;
+    label { flex: 1 1 45%; }
+    input { width: 100%; min-width: 0; }
+  }
+
+  .kpi-row { grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); }
+
+  .stat-tile .stat-value { font-size: 1.25rem; }
+
+  table.rank-table {
+    font-size: 0.82rem;
+    th, td { padding: 0.4rem 0.35rem; }
+    .hide-sm { display: none; }
+
+    /* No room for a meter and a number: keep the number. */
+    .rate-col { min-width: 0; }
+    .rate-col .rate-inner { justify-content: flex-end; }
+    .meter { display: none; }
+  }
+}

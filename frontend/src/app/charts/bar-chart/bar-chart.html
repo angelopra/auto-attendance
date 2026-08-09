@@ -1,0 +1,70 @@
+<figure class="chart-figure">
+  <figcaption class="chart-head">
+    <div>
+      <h4>{{ title() }}</h4>
+      @if (subtitle()) { <p class="chart-sub">{{ subtitle() }}</p> }
+    </div>
+    <button type="button" class="table-toggle" (click)="showTable.set(!showTable())">
+      {{ (showTable() ? 'charts.showChart' : 'charts.showTable') | translate }}
+    </button>
+  </figcaption>
+
+  @if (showTable()) {
+    <div class="table-view">
+      <table>
+        <thead>
+          <tr><th>{{ categoryLabel() }}</th><th>{{ valueLabel() }}</th></tr>
+        </thead>
+        <tbody>
+          @for (p of points(); track p.label) {
+            <tr>
+              <td>{{ p.label }}</td>
+              <td class="num">
+                {{ format(p.value) }}{{ suffix() }}
+                @if (p.meta) { <span class="meta">{{ p.meta }}</span> }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else if (points().length === 0) {
+    <p class="empty">{{ 'charts.empty' | translate }}</p>
+  } @else {
+    <div class="chart-body" (pointerleave)="hovered.set(null)">
+      <svg [attr.viewBox]="'0 0 ' + width() + ' ' + height()" [attr.height]="height()" width="100%"
+           role="img" [attr.aria-label]="title()">
+        @for (tick of ticks(); track tick) {
+          <line [attr.x1]="pad.left" [attr.x2]="width() - pad.right"
+                [attr.y1]="yFor(tick)" [attr.y2]="yFor(tick)"
+                [attr.stroke]="colors.grid" stroke-width="1" />
+          <text [attr.x]="pad.left - 8" [attr.y]="yFor(tick) + 4" text-anchor="end"
+                class="axis-text">{{ format(tick) }}</text>
+        }
+
+        @for (bar of bars(); track bar.index) {
+          <path [attr.d]="bar.path" [attr.fill]="bar.color"
+                [attr.opacity]="hovered() === null || hovered() === bar.index ? 1 : 0.55" />
+        }
+
+        @for (bar of bars(); track bar.index) {
+          @if (showLabel(bar.index)) {
+            <text [attr.x]="bar.centerX" [attr.y]="height() - pad.bottom + 16"
+                  text-anchor="middle" class="axis-text">{{ axisLabel(bar.point) }}</text>
+          }
+          <rect [attr.x]="bar.bandX" [attr.y]="pad.top" [attr.width]="bar.bandWidth"
+                [attr.height]="plotHeight()" fill="transparent"
+                (pointerenter)="hovered.set(bar.index)" (click)="hovered.set(bar.index)" />
+        }
+      </svg>
+
+      @if (hoveredBar(); as bar) {
+        <div class="tooltip" [style.left.px]="tooltipX(bar)" [style.top.px]="bar.topY">
+          <strong>{{ bar.point.label }}</strong>
+          <span>{{ format(bar.point.value) }}{{ suffix() }}</span>
+          @if (bar.point.meta) { <span class="meta">{{ bar.point.meta }}</span> }
+        </div>
+      }
+    </div>
+  }
+</figure>

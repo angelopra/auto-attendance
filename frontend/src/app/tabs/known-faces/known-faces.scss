@@ -23,11 +23,24 @@
     border-radius: 4px;
   }
 
+  .rename-hint {
+    font-size: 0.68rem;
+    color: #898781;
+    text-align: center;
+  }
+
   .card-actions {
     display: flex;
     gap: 0.3rem;
     justify-content: center;
     flex-wrap: wrap;
+  }
+
+  .btn-outline {
+    background: #fff;
+    color: #1e3a5f;
+    border: 1px solid #1e3a5f;
+    &:hover:not(:disabled) { background: #e8eef6; }
   }
 
   .btn-sm {
@@ -85,4 +98,20 @@
   }
 
   .merge-error { color: #fca5a5; font-size: 0.85rem; }
+}
+
+@media (max-width: 640px) {
+  .merge-bar {
+    left: 0.5rem;
+    right: 0.5rem;
+    bottom: 0.5rem;
+    transform: none;
+    justify-content: center;
+    padding: 0.6rem 0.75rem;
+
+    select { flex: 1 1 100%; min-width: 0; }
+    button { flex: 1 1 auto; }
+  }
+
+  .person-card .card-actions button { flex: 1 1 auto; }
 }

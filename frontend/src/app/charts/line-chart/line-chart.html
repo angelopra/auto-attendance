@@ -1,0 +1,90 @@
+<figure class="chart-figure">
+  <figcaption class="chart-head">
+    <div>
+      <h4>{{ title() }}</h4>
+      @if (subtitle()) { <p class="chart-sub">{{ subtitle() }}</p> }
+    </div>
+    <button type="button" class="table-toggle" (click)="showTable.set(!showTable())">
+      {{ (showTable() ? 'charts.showChart' : 'charts.showTable') | translate }}
+    </button>
+  </figcaption>
+
+  @if (showTable()) {
+    <div class="table-view">
+      <table>
+        <thead>
+          <tr><th>{{ categoryLabel() }}</th><th>{{ valueLabel() }}</th></tr>
+        </thead>
+        <tbody>
+          @for (p of points(); track p.label) {
+            <tr>
+              <td>{{ p.label }}</td>
+              <td class="num">
+                {{ format(p.value) }}{{ suffix() }}
+                @if (p.meta) { <span class="meta">{{ p.meta }}</span> }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else if (points().length === 0) {
+    <p class="empty">{{ 'charts.empty' | translate }}</p>
+  } @else {
+    <div class="chart-body" (pointerleave)="hovered.set(null)">
+      <svg [attr.viewBox]="'0 0 ' + width() + ' ' + height()" [attr.height]="height()" width="100%"
+           role="img" [attr.aria-label]="title()">
+        @for (tick of ticks(); track tick) {
+          <line [attr.x1]="pad.left" [attr.x2]="width() - pad.right"
+                [attr.y1]="yFor(tick)" [attr.y2]="yFor(tick)"
+                [attr.stroke]="colors.grid" stroke-width="1" />
+          <text [attr.x]="pad.left - 8" [attr.y]="yFor(tick) + 4" text-anchor="end"
+                class="axis-text">{{ format(tick) }}</text>
+        }
+
+        <path [attr.d]="areaPath()" [attr.fill]="colors.seriesSoft" />
+        <path [attr.d]="linePath()" fill="none" [attr.stroke]="colors.series"
+              stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+
+        @if (hoveredDot(); as dot) {
+          <line [attr.x1]="dot.x" [attr.x2]="dot.x" [attr.y1]="pad.top"
+                [attr.y2]="pad.top + plotHeight()" [attr.stroke]="colors.axis" stroke-width="1" />
+        }
+
+        @for (dot of markedDots(); track dot.index) {
+          <circle [attr.cx]="dot.x" [attr.cy]="dot.y" r="4.5"
+                  [attr.fill]="colors.series" [attr.stroke]="colors.surface" stroke-width="2" />
+        }
+
+        @if (hoveredDot(); as dot) {
+          <circle [attr.cx]="dot.x" [attr.cy]="dot.y" r="5.5"
+                  [attr.fill]="colors.series" [attr.stroke]="colors.surface" stroke-width="2" />
+        }
+
+        @if (lastDot(); as dot) {
+          <text [attr.x]="dot.x" [attr.y]="dot.y - 12" text-anchor="end" class="value-label">
+            {{ format(dot.point.value) }}{{ suffix() }}
+          </text>
+        }
+
+        @for (dot of dots(); track dot.index) {
+          @if (showLabel(dot.index)) {
+            <text [attr.x]="dot.x" [attr.y]="height() - pad.bottom + 16" text-anchor="middle"
+                  class="axis-text">{{ axisLabel(dot.point) }}</text>
+          }
+          <rect [attr.x]="dot.x - hitWidth() / 2" [attr.y]="pad.top" [attr.width]="hitWidth()"
+                [attr.height]="plotHeight()" fill="transparent"
+                (pointerenter)="hovered.set(dot.index)" (click)="hovered.set(dot.index)" />
+        }
+      </svg>
+
+      @if (hoveredDot(); as dot) {
+        <div class="tooltip" [style.left.px]="tooltipX(dot)" [style.top.px]="dot.y">
+          <strong>{{ dot.point.label }}</strong>
+          <span>{{ format(dot.point.value) }}{{ suffix() }}</span>
+          @if (dot.point.meta) { <span class="meta">{{ dot.point.meta }}</span> }
+        </div>
+      }
+    </div>
+  }
+</figure>

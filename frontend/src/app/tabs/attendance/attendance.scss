@@ -1,58 +1,147 @@
+.attendance-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
 .filter-bar {
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
   align-items: flex-end;
   flex-wrap: wrap;
+  flex: 1 1 320px;
 
   .input-group {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
-    
+    flex: 1 1 140px;
+    min-width: 0;
+
     label {
       font-size: 0.85rem;
       font-weight: 600;
-      color: #555;
+      color: #52514e;
     }
 
     input {
       padding: 0.5rem;
       border: 1px solid #ccc;
-      border-radius: 4px;
+      border-radius: 6px;
       font-size: 0.9rem;
-      
+      width: 100%;
+      min-width: 0;
+
       &:focus {
         outline: none;
-        border-color: #0066cc;
+        border-color: #2a78d6;
       }
     }
   }
 
   .btn-secondary {
     padding: 0.5rem 1rem;
-    height: 36px;
+    min-height: 40px;
     border: 1px solid #ccc;
-    border-radius: 4px;
+    border-radius: 6px;
+    background: #fff;
+    color: #18181b;
+
+    &:hover:not(:disabled) { background: #f0efec; }
   }
+}
+
+.action-bar {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+
+  .btn-success {
+    background: #0ca30c;
+    &:hover:not(:disabled) { background: #0a8a0a; }
+  }
+
+  .btn-outline {
+    background: #fff;
+    color: #1e3a5f;
+    border: 1px solid #1e3a5f;
+    &:hover:not(:disabled) { background: #e8eef6; }
+  }
+}
+
+.pagination-buttons {
+  display: flex;
+  gap: 0.5rem;
+
+  button { min-width: 44px; }
+}
+
+.edit-panel {
+  background: #fff7f2;
+  border: 1px solid #f5cdb8;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+
+  .edit-hint { margin: 0 0 0.6rem; font-size: 0.9rem; color: #52514e; }
+
+  .edit-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+
+    label { font-size: 0.85rem; font-weight: 600; }
+  }
+}
+
+.legend {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  font-size: 0.82rem;
+  color: #898781;
+  margin: 0 0 0.75rem;
+}
+
+.edit-mark {
+  color: #b3461c;
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
+.notice {
+  color: #1c5cab;
+  background: #eaf2fd;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
 }
 
 .table-wrapper {
   max-height: 70vh;
-  border: 1px solid #e0e0e0;
+  overflow: auto;
+  border: 1px solid #e1e0d9;
   border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  -webkit-overflow-scrolling: touch;
 }
 
-table {
+table.attendance-table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
   text-align: left;
+  box-shadow: none;
 
   th, td {
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid #e0e0e0;
-    border-right: 1px solid #e0e0e0;
+    padding: 0.55rem 0.5rem;
+    border-bottom: 1px solid #e1e0d9;
     white-space: nowrap;
   }
 
@@ -61,28 +150,93 @@ table {
     position: sticky;
     top: 0;
     z-index: 2;
+    background: #1e3a5f;
+    color: #fff;
+    text-align: center;
+    font-size: 0.85rem;
   }
 
-  thead th.sticky-col {
-    z-index: 3;
-    background-color: #f8f9fa;
+  /* The person column soaks up the spare width so the date columns stay
+     exactly as wide as the date in their header. */
+  .sticky-col {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: #fff;
+    text-align: left;
+    width: 100%;
+    max-width: 45vw;
   }
+
+  .date-col { width: 1%; }
+
+  thead .sticky-col {
+    z-index: 3;
+    background: #1e3a5f;
+  }
+
+  tbody tr:hover .sticky-col { background: #f9f9f7; }
 
   .person-cell {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-
     .thumb-sm {
-      width: 32px;
-      height: 32px;
+      width: 30px;
+      height: 30px;
       border-radius: 50%;
       object-fit: cover;
+      vertical-align: middle;
+      margin-right: 0.5rem;
     }
-    
+
     .name-text {
+      display: inline-block;
+      vertical-align: middle;
       overflow: hidden;
       text-overflow: ellipsis;
+      max-width: 40vw;
     }
+  }
+
+  td {
+    position: relative;
+    text-align: center;
+  }
+
+  td.present .mark { color: #16a34a; font-weight: 700; font-size: 1.05rem; }
+  td.absent { color: #e1e0d9; }
+
+  /* Pen marker for a cell somebody changed by hand. */
+  td.edited .edit-mark {
+    position: absolute;
+    top: 2px;
+    right: 3px;
+  }
+
+  td.clickable {
+    cursor: pointer;
+
+    &:hover { background: #eaf2fd; }
+  }
+
+  .add-mark { color: #c3c2b7; font-size: 1.1rem; }
+}
+
+@media (max-width: 640px) {
+  .attendance-controls { gap: 0.75rem; }
+
+  .action-bar {
+    width: 100%;
+    button { flex: 1 1 auto; min-height: 44px; }
+  }
+
+  .pagination-buttons { flex: 1 1 100%; button { flex: 1 1 auto; } }
+
+  table.attendance-table {
+    font-size: 0.85rem;
+
+    th, td { padding: 0.5rem 0.3rem; }
+    thead th { font-size: 0.75rem; }
+
+    .person-cell .thumb-sm { width: 26px; height: 26px; margin-right: 0.35rem; }
+    .person-cell .name-text { max-width: 34vw; }
   }
 }
