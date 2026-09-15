@@ -27,6 +27,10 @@ export class UploadPhoto {
   uploadedPhoto = signal<GroupPhoto | null>(null);
   detections = signal<AttendanceDetection[]>([]);
   error = signal('');
+  /** Detections whose "is this {person}?" question was answered with no. */
+  dismissedSuggestions = signal<Set<number>>(new Set());
+  /** Detection whose suggestion is being accepted right now. */
+  acceptingId = signal<number | null>(null);
 
   onFileChange(event: Event) {
     const input = event.target as HTMLInputElement;
@@ -78,6 +82,36 @@ export class UploadPhoto {
     this.api.getDetectionsForPhoto(photoId).subscribe({
       next: d => this.detections.set(d),
     });
+  }
+
+  showSuggestion(d: AttendanceDetection): boolean {
+    return !!d.suggestion && !!d.person && !this.dismissedSuggestions().has(d.id);
+  }
+
+  /** Yes: label the unknown face with the suggested name, merging it into that person. */
+  acceptSuggestion(d: AttendanceDetection) {
+    if (!d.suggestion || !d.person || this.acceptingId() !== null) return;
+    this.error.set('');
+    this.acceptingId.set(d.id);
+    this.api.updatePerson(d.person.id, d.suggestion.person.name).subscribe({
+      next: () => {
+        this.acceptingId.set(null);
+        this.loadDetections(d.photo_id);
+      },
+      error: err => {
+        this.acceptingId.set(null);
+        this.error.set(
+          this.translate.instant('upload.suggestionFailed', {
+            reason: err?.error?.detail ?? err?.message ?? this.translate.instant('errors.unexpected'),
+          })
+        );
+      },
+    });
+  }
+
+  /** No: just drop the question. */
+  dismissSuggestion(d: AttendanceDetection) {
+    this.dismissedSuggestions.update(ids => new Set(ids).add(d.id));
   }
 
   faceUrl(path: string | null) {

@@ -24,7 +24,9 @@
     "delete": "Excluir",
     "clear": "Limpar",
     "loading": "Carregando…",
-    "unknown": "Desconhecido"
+    "unknown": "Desconhecido",
+    "yes": "Sim",
+    "no": "Não"
   },
   "charts": {
     "showTable": "Ver tabela",
@@ -44,7 +46,9 @@
     "missing": "Selecione uma foto e uma data.",
     "failed": "Falha no envio: {{reason}}",
     "processed": "Processado: {{date}}",
-    "facesDetected": "{{count}} rosto(s) detectado(s)."
+    "facesDetected": "{{count}} rosto(s) detectado(s).",
+    "suggestionQuestion": "É {{name}}?",
+    "suggestionFailed": "Não foi possível identificar o rosto: {{reason}}"
   },
   "known": {
     "title": "Rostos Conhecidos",
@@ -154,10 +158,7 @@
     "absentNone": "Ninguém faltou a dois encontros seguidos.",
     "absentWatch": "Atenção",
     "absentLong": "Ausência longa",
-    "absentMeta": "{{count}} encontro(s) perdido(s) · visto por último em {{date}}",
-    "streaksTitle": "Maiores sequências",
-    "streaksSubtitle": "Mais encontros seguidos dentro deste período.",
-    "currentStreak": "sequência atual {{count}}"
+    "absentMeta": "{{count}} encontro(s) perdido(s) · visto por último em {{date}}"
   },
   "manage": {
     "title": "Gerenciar Dados",
@@ -199,7 +200,8 @@
     "actionDetectionRemoved": "Rosto detectado removido",
     "actionPhotoDateChanged": "Foto movida para outra data",
     "actionPhotoDeleted": "Foto excluída",
-    "actionPersonDeleted": "Pessoa excluída"
+    "actionPersonDeleted": "Pessoa excluída",
+    "viewPhoto": "Abrir foto"
   },
   "errors": {
     "unexpected": "Erro inesperado"

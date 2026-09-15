@@ -25,6 +25,17 @@ export const groupBy = <T>(arr: T[], predicate: (keyof T) | ((o: T, i: number) =
   }, {} as Record<string, T[] | undefined>);
 };
 
+/** Hand a downloaded file to the browser to save. */
+export function saveBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  // The browser reads the blob after click() returns; revoking right away leaves an empty download.
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 /**
  * Converts a string into a normalized, searchable format.
  */

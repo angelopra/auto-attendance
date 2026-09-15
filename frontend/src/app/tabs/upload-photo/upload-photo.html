@@ -50,6 +50,21 @@
             @if (d.confidence) {
               <small>{{ (+d.confidence * 100).toFixed(1) }}%</small>
             }
+            @if (showSuggestion(d)) {
+              <div class="suggestion">
+                <p>{{ 'upload.suggestionQuestion' | translate: { name: d.suggestion!.person.name } }}</p>
+                <div class="suggestion-actions">
+                  <button type="button" class="btn-sm" (click)="acceptSuggestion(d)"
+                          [disabled]="acceptingId() !== null">
+                    {{ 'common.yes' | translate }}
+                  </button>
+                  <button type="button" class="btn-outline btn-sm" (click)="dismissSuggestion(d)"
+                          [disabled]="acceptingId() === d.id">
+                    {{ 'common.no' | translate }}
+                  </button>
+                </div>
+              </div>
+            }
           </div>
         }
       </div>

@@ -59,7 +59,7 @@
         <div class="stat-tile">
           <span class="stat-label">{{ 'dashboards.tilePeople' | translate }}</span>
           <span class="stat-value">{{ activeStats().length }}</span>
-          <span class="stat-meta">{{ 'dashboards.tilePeopleMeta' | translate: { count: stats().length } }}</span>
+          <span class="stat-meta">{{ 'dashboards.tilePeopleMeta' | translate: { count: registeredPeople() } }}</span>
         </div>
         <div class="stat-tile">
           <span class="stat-label">{{ 'dashboards.tileRate' | translate }}</span>
@@ -73,7 +73,7 @@
         </div>
         <div class="stat-tile">
           <span class="stat-label">{{ 'dashboards.tileNew' | translate }}</span>
-          <span class="stat-value">{{ newPeople().length }}</span>
+          <span class="stat-value">{{ newPeople() }}</span>
           <span class="stat-meta">{{ 'dashboards.tileNewMeta' | translate }}</span>
         </div>
       </div>
@@ -167,8 +167,8 @@
                     <span class="meter-value">{{ percent(stat.rate) }}</span>
                   </div>
                 </td>
-                <td class="num hide-sm">{{ stat.currentStreak }}</td>
-                <td class="hide-sm">{{ stat.lastSeen | localizedDate }}</td>
+                <td class="num hide-sm">{{ stat.current_streak }}</td>
+                <td class="hide-sm">{{ stat.last_seen | localizedDate }}</td>
               </tr>
             }
           </tbody>
@@ -176,44 +176,26 @@
       </div>
     </div>
 
-    <div class="chart-grid">
-      <div class="card">
-        <h3>{{ 'dashboards.absentTitle' | translate }}</h3>
-        <p class="muted small">{{ 'dashboards.absentSubtitle' | translate }}</p>
-        @if (absentLately().length === 0) {
-          <p class="muted small">{{ 'dashboards.absentNone' | translate }}</p>
-        } @else {
-          <ul class="plain-list">
-            @for (stat of absentLately(); track stat.person.id) {
-              <li>
-                <span class="status" [class.warning]="absenceSeverity(stat.missedInARow) === 'warning'"
-                      [class.critical]="absenceSeverity(stat.missedInARow) === 'critical'">
-                  <span class="status-icon" aria-hidden="true">!</span>
-                  <span class="status-label">{{ absenceLabel(stat.missedInARow) }}</span>
-                </span>
-                <span class="who">{{ stat.person.name }}</span>
-                <span class="muted small">{{ absenceMeta(stat) }}</span>
-              </li>
-            }
-          </ul>
-        }
-      </div>
-
-      <div class="card">
-        <h3>{{ 'dashboards.streaksTitle' | translate }}</h3>
-        <p class="muted small">{{ 'dashboards.streaksSubtitle' | translate }}</p>
+    <div class="card">
+      <h3>{{ 'dashboards.absentTitle' | translate }}</h3>
+      <p class="muted small">{{ 'dashboards.absentSubtitle' | translate }}</p>
+      @if (absentLately().length === 0) {
+        <p class="muted small">{{ 'dashboards.absentNone' | translate }}</p>
+      } @else {
         <ul class="plain-list">
-          @for (stat of longestStreaks(); track stat.person.id) {
+          @for (stat of absentLately(); track stat.person.id) {
             <li>
-              <span class="streak-badge">{{ stat.longestStreak }}</span>
-              <span class="who">{{ stat.person.name }}</span>
-              <span class="muted small">
-                {{ 'dashboards.currentStreak' | translate: { count: stat.currentStreak } }}
+              <span class="status" [class.warning]="absenceSeverity(stat.missed_in_a_row) === 'warning'"
+                    [class.critical]="absenceSeverity(stat.missed_in_a_row) === 'critical'">
+                <span class="status-icon" aria-hidden="true">!</span>
+                <span class="status-label">{{ absenceLabel(stat.missed_in_a_row) }}</span>
               </span>
+              <span class="who">{{ stat.person.name }}</span>
+              <span class="muted small">{{ absenceMeta(stat) }}</span>
             </li>
           }
         </ul>
-      </div>
+      }
     </div>
   }
 </section>

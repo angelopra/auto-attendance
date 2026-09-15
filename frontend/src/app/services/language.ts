@@ -36,6 +36,9 @@ export class LanguageService {
 
   private readonly order = computed(() => DATE_ORDER[this.current()]);
 
+  /** How the active language orders a date, for dates the server writes out. */
+  readonly dateOrder = this.order;
+
   /** Applied by an app initializer, before anything renders. */
   init() {
     const stored = this.read();

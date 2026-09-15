@@ -37,7 +37,7 @@
     <h3>{{ 'manage.sessionsTitle' | translate }}</h3>
     <p class="muted">{{ 'manage.sessionsIntro' | translate }}</p>
 
-    @if (photos().length > 0) {
+    @if (hasPhotos()) {
       <label class="session-search">
         {{ 'manage.sessionSearch' | translate }}
         <input type="search" [placeholder]="'manage.sessionSearchPlaceholder' | translate"
@@ -45,9 +45,11 @@
       </label>
     }
 
-    @if (photos().length === 0) {
+    @if (!sessionsLoaded()) {
+      <p class="muted small">{{ 'common.loading' | translate }}</p>
+    } @else if (!hasPhotos()) {
       <p>{{ 'manage.noPhotos' | translate }}</p>
-    } @else if (sessions().length === 0) {
+    } @else if (sessions().length === 0 && !loadingSessions()) {
       <p class="muted small">{{ 'manage.noMatch' | translate: { term: sessionFilter() } }}</p>
     }
 
@@ -63,7 +65,10 @@
 
         @for (photo of session.photos; track photo.id) {
           <div class="photo-row">
-            <img class="photo-thumb" [src]="imageUrl(photo.photo_path)" alt="" loading="lazy" />
+            <button type="button" class="thumb-button" (click)="openViewer(photo)"
+                    [attr.aria-label]="'manage.viewPhoto' | translate" [title]="'manage.viewPhoto' | translate">
+              <img class="photo-thumb" [src]="imageUrl(photo.photo_path)" alt="" loading="lazy" />
+            </button>
 
             <div class="photo-info">
               <span class="filename">{{ photo.filename }}</span>
@@ -126,8 +131,9 @@
     }
 
     @if (hiddenSessions() > 0) {
-      <button type="button" class="btn-outline show-more" (click)="showMoreSessions()">
-        {{ 'manage.showOlder' | translate: { count: hiddenSessions() } }}
+      <button type="button" class="btn-outline show-more" (click)="showMoreSessions()"
+              [disabled]="loadingSessions()">
+        {{ 'manage.showOlder' | translate: { count: nextSessionBatch() } }}
       </button>
     }
   </div>
@@ -157,4 +163,12 @@
       </ul>
     }
   </div>
+
+  <!-- ── Full-size photo; a click anywhere but the photo closes it ───────── -->
+  @if (viewerPhoto(); as photo) {
+    <div class="photo-viewer" role="dialog" aria-modal="true" [attr.aria-label]="photo.filename"
+         (click)="closeViewer()">
+      <img [src]="imageUrl(photo.photo_path)" [alt]="photo.filename" (click)="$event.stopPropagation()" />
+    </div>
+  }
 </section>

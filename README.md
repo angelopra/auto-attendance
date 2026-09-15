@@ -20,7 +20,7 @@ The app stores attendance records per person and per day.
 | Upload Photo | Upload a group photo for a date, preview it full size, and see the faces it found |
 | Known Faces | The registry of labelled people (rename inline: Enter saves, Esc cancels) |
 | Attendance | The person × date grid, with an edit mode (see below) |
-| Dashboards | Turnout over time, per weekday and per month, rankings, streaks and people who stopped coming |
+| Dashboards | Turnout over time, per weekday and per month, rankings and people who stopped coming |
 | Manage | Fix or delete uploaded sessions, download a backup, read the change history |
 
 ## Editing Attendance

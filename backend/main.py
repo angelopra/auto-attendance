@@ -11,20 +11,25 @@ from typing import Optional
 
 from fastapi import FastAPI, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy.orm import Session
+from sqlalchemy import func
+from sqlalchemy.orm import Session, defer, selectinload
 from starlette.background import BackgroundTask
 
 import backup as backup_utils
 import models
+import reports
 import schemas
 from database import Base, apply_pending_migrations, engine, get_db
 from face_utils import (
+    closest_person,
     compute_embedding,
     detect_and_crop_faces,
     find_best_match,
+    is_near_miss,
 )
+from image_utils import compress_if_large
 
 # ── Bootstrap ─────────────────────────────────────────────────────────────────
 _startup_error = None
@@ -34,7 +39,7 @@ PHOTOS_DIR = UPLOAD_DIR / "photos"
 SELFIES_DIR = UPLOAD_DIR / "selfies"
 FACES_DIR = UPLOAD_DIR / "faces"
 
-UNKNOWN_NAME = "Unknown"
+UNKNOWN_NAME = models.UNKNOWN_NAME
 
 try:
     Base.metadata.create_all(bind=engine)
@@ -81,13 +86,13 @@ app.mount("/uploads", StaticFiles(directory="database/uploads"), name="uploads")
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def save_upload(file: UploadFile, dest_dir: Path) -> tuple[str, str]:
-    """Save uploaded file; return (saved_path, original_filename)."""
+    """Save uploaded file, compressing it if oversized; return (saved_path, original_filename)."""
     ext = Path(file.filename).suffix or ".jpg"
     filename = f"{uuid.uuid4().hex}{ext}"
     dest = dest_dir / filename
     with dest.open("wb") as f:
         shutil.copyfileobj(file.file, f)
-    return str(dest), file.filename
+    return str(compress_if_large(dest)), file.filename
 
 
 def log_change(
@@ -276,6 +281,57 @@ def list_photos(db: Session = Depends(get_db)):
     return db.query(models.GroupPhoto).order_by(models.GroupPhoto.date.desc()).all()
 
 
+@app.get("/photos/sessions", response_model=schemas.PhotoSessionPage)
+def list_photo_sessions(
+    offset: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1, le=100),
+    q: str = Query("", description="Matches the date (ISO or as displayed) or a file name"),
+    date_order: reports.DateOrder = "dmy",
+    db: Session = Depends(get_db),
+):
+    """Photos grouped by date, newest first, one page of dates at a time."""
+    dates = [
+        d for (d,) in db.query(models.GroupPhoto.date).distinct().order_by(models.GroupPhoto.date.desc())
+    ]
+    has_photos = bool(dates)
+
+    term = q.strip().lower()
+    if term:
+        named = {
+            d for (d,) in db.query(models.GroupPhoto.date)
+            .filter(func.lower(models.GroupPhoto.filename).contains(term, autoescape=True))
+            .distinct()
+        }
+        dates = [
+            d for d in dates
+            if d in named or term in d.isoformat() or term in reports.format_date(d, date_order)
+        ]
+
+    page = dates[offset:offset + limit]
+    photos = (
+        db.query(models.GroupPhoto)
+        .filter(models.GroupPhoto.date.in_(page))
+        .order_by(models.GroupPhoto.uploaded_at, models.GroupPhoto.id)
+        .all()
+        if page
+        else []
+    )
+    by_date: dict[dt.date, list[models.GroupPhoto]] = {d: [] for d in page}
+    for photo in photos:
+        by_date[photo.date].append(photo)
+
+    return schemas.PhotoSessionPage(
+        sessions=[
+            schemas.PhotoSession(
+                date=d, photos=group, edited=any(p.date_edited_at for p in group)
+            )
+            for d, group in by_date.items()
+        ],
+        total=len(dates),
+        has_photos=has_photos,
+    )
+
+
 @app.post("/photos/upload", response_model=schemas.GroupPhotoOut)
 async def upload_group_photo(
     date: str = Form(...),          # ISO date string YYYY-MM-DD
@@ -421,7 +477,15 @@ def _process_group_photo(photo_id: int, photo_path: str, db: Session):
 @app.get("/attendance", response_model=list[schemas.AttendanceRow])
 def get_attendance(db: Session = Depends(get_db)):
     """Return each known person and the dates they were present, with the source."""
-    persons = db.query(models.KnownPerson).all()
+    persons = (
+        db.query(models.KnownPerson)
+        .options(
+            defer(models.KnownPerson.embedding),
+            selectinload(models.KnownPerson.detections).selectinload(models.AttendanceDetection.photo),
+            selectinload(models.KnownPerson.manual_attendances),
+        )
+        .all()
+    )
     rows: list[schemas.AttendanceRow] = []
 
     for person in persons:
@@ -458,13 +522,120 @@ def get_attendance(db: Session = Depends(get_db)):
     return rows
 
 
+@app.get("/attendance/grid", response_model=schemas.AttendanceGridPage)
+def get_attendance_grid(
+    limit: int = Query(8, ge=1, le=100),
+    offset: Optional[int] = Query(None, ge=0, description="Omit to get the most recent dates"),
+    start_date: Optional[dt.date] = None,
+    end_date: Optional[dt.date] = None,
+    extra_dates: list[dt.date] = Query([], description="Columns to show even with no presence yet"),
+    focus_date: Optional[dt.date] = Query(None, description="Move the window so this date is visible"),
+    include_absent: bool = Query(False, description="Also list people absent on every visible date"),
+    db: Session = Depends(get_db),
+):
+    """
+    One page of the attendance grid: `limit` date columns and the rows for them.
+
+    Rows are grouped by name (labelling faces renames rows rather than merging them)
+    and Unknown faces are left out.
+    """
+    dates = sorted(
+        d for d in reports.attendance_dates(db) | set(extra_dates)
+        if (start_date is None or d >= start_date) and (end_date is None or d <= end_date)
+    )
+
+    total = len(dates)
+    last_offset = max(0, total - limit)
+    if focus_date is not None and focus_date in dates:
+        offset = min(dates.index(focus_date), last_offset)
+    elif offset is None:
+        offset = last_offset
+    else:
+        offset = min(offset, last_offset)
+    visible = dates[offset:offset + limit]
+
+    if not visible:
+        return schemas.AttendanceGridPage(dates=[], offset=0, total_dates=total, rows=[], edits=[])
+
+    rows = [
+        schemas.AttendanceGridRow(person=person, entries=[entries[d] for d in sorted(entries)])
+        for person, entries in reports.grouped_attendance(db, visible)
+        if entries or include_absent
+    ]
+
+    return schemas.AttendanceGridPage(
+        dates=visible,
+        offset=offset,
+        total_dates=total,
+        rows=rows,
+        edits=latest_attendance_edits(db, visible),
+    )
+
+
+@app.get("/attendance/export")
+def export_attendance(
+    date_order: reports.DateOrder = "dmy",
+    extra_dates: list[dt.date] = Query([], description="Rows to add even with no presence yet"),
+    date_label: str = "Date",
+    present_label: str = "yes",
+    manual_label: str = "yes (manual)",
+    sheet_name: str = "Attendance Report",
+    db: Session = Depends(get_db),
+):
+    """The whole attendance history as an .xlsx file, labelled in the caller's language."""
+    content = reports.build_attendance_workbook(
+        db,
+        extra_dates=extra_dates,
+        date_order=date_order,
+        date_label=date_label,
+        present_label=present_label,
+        manual_label=manual_label,
+        sheet_name=sheet_name,
+    )
+    filename = f"attendance_report_{dt.date.today().isoformat()}.xlsx"
+    return Response(
+        content,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.get("/dashboards", response_model=schemas.DashboardOut)
+def get_dashboards(
+    start_date: Optional[dt.date] = None,
+    end_date: Optional[dt.date] = None,
+    db: Session = Depends(get_db),
+):
+    """Every number the dashboards show, for the sessions within the range."""
+    return reports.build_dashboard(db, start_date, end_date)
+
+
 @app.get("/attendance/detections/{photo_id}", response_model=list[schemas.AttendanceDetectionOut])
 def get_detections_for_photo(photo_id: int, db: Session = Depends(get_db)):
-    return (
+    detections = (
         db.query(models.AttendanceDetection)
         .filter(models.AttendanceDetection.photo_id == photo_id)
         .all()
     )
+    out = [schemas.AttendanceDetectionOut.model_validate(d) for d in detections]
+
+    unknown = [
+        (item, d.person) for item, d in zip(out, detections)
+        if d.person is not None and d.person.name == UNKNOWN_NAME and d.person.embedding
+    ]
+    if not unknown:
+        return out
+
+    named = db.query(models.KnownPerson).filter(models.KnownPerson.name != UNKNOWN_NAME).all()
+    for item, person in unknown:
+        try:
+            embedding = json.loads(person.embedding)
+        except ValueError:
+            continue
+        closest, score = closest_person(embedding, named)
+        if closest is not None and is_near_miss(score):
+            item.suggestion = schemas.FaceSuggestion(person=closest, score=score)
+    return out
 
 
 #: Audit actions that leave a visible mark on one cell of the attendance grid.
@@ -483,15 +654,23 @@ def get_attendance_edits(db: Session = Depends(get_db)):
     Removals leave no row behind, so the grid cannot tell an edited empty cell from
     one that was always empty — this reads that back out of the audit trail.
     """
-    entries = (
+    return latest_attendance_edits(db)
+
+
+def latest_attendance_edits(
+    db: Session, dates: Optional[list[dt.date]] = None
+) -> list[schemas.AttendanceEdit]:
+    """The latest by-hand change per person/date, optionally only for some dates."""
+    query = (
         db.query(models.AuditLog)
         .filter(models.AuditLog.action.in_(CELL_EDIT_ACTIONS.keys()))
         .filter(models.AuditLog.date.isnot(None))
-        .order_by(models.AuditLog.created_at.asc(), models.AuditLog.id.asc())
-        .all()
     )
+    if dates is not None:
+        query = query.filter(models.AuditLog.date.in_(dates))
+    entries = query.order_by(models.AuditLog.created_at.asc(), models.AuditLog.id.asc()).all()
     # Follow renames: the grid groups people by their current name.
-    current_names = {p.id: p.name for p in db.query(models.KnownPerson).all()}
+    current_names = dict(db.query(models.KnownPerson.id, models.KnownPerson.name).all())
 
     latest: dict[tuple[str, dt.date], schemas.AttendanceEdit] = {}
     for entry in entries:

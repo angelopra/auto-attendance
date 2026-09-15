@@ -19,6 +19,30 @@ export interface GroupPhoto {
   date_edited_at: string | null;
 }
 
+/** A known person an unrecognised face resembles, just short of the match threshold. */
+export interface FaceSuggestion {
+  person: KnownPerson;
+  score: number;
+}
+
+/** Every photo uploaded for one date. */
+export interface PhotoSession {
+  date: string;
+  photos: GroupPhoto[];
+  /** Some photo's date was corrected by hand. */
+  edited: boolean;
+}
+
+export interface PhotoSessionPage {
+  sessions: PhotoSession[];
+  /** Sessions matching the search. */
+  total: number;
+  /** Whether anything was ever uploaded. */
+  has_photos: boolean;
+}
+
+export type DateOrder = 'dmy' | 'mdy';
+
 export interface AttendanceDetection {
   id: number;
   photo_id: number;
@@ -26,6 +50,7 @@ export interface AttendanceDetection {
   face_crop_path: string | null;
   confidence: string | null;
   person: KnownPerson | null;
+  suggestion: FaceSuggestion | null;
 }
 
 export type AttendanceSource = 'auto' | 'manual';
@@ -37,10 +62,33 @@ export interface AttendanceEntry {
   note: string | null;
 }
 
-export interface AttendanceRow {
+export interface AttendanceGridRow {
   person: KnownPerson;
-  dates: string[];
   entries: AttendanceEntry[];
+}
+
+/** A window of date columns of the attendance grid. */
+export interface AttendanceGridPage {
+  dates: string[];
+  /** Index of dates[0] among all matching dates. */
+  offset: number;
+  total_dates: number;
+  rows: AttendanceGridRow[];
+  edits: AttendanceEdit[];
+}
+
+export interface AttendanceGridQuery {
+  limit: number;
+  /** Omit for the most recent dates. */
+  offset?: number | null;
+  startDate?: string;
+  endDate?: string;
+  /** Columns to show even with no presence yet. */
+  extraDates?: string[];
+  /** Move the window so this date is visible. */
+  focusDate?: string;
+  /** Also list people absent on every visible date. */
+  includeAbsent?: boolean;
 }
 
 export interface ManualAttendance {
@@ -65,6 +113,64 @@ export interface AttendanceEdit {
   date: string;
   change: 'added' | 'removed';
   changed_at: string;
+}
+
+/** Labels and options for the server-built Excel export. */
+export interface AttendanceExportOptions {
+  dateOrder: DateOrder;
+  /** Rows to add even with no presence yet. */
+  extraDates: string[];
+  dateLabel: string;
+  presentLabel: string;
+  manualLabel: string;
+  sheetName: string;
+}
+
+// ── Dashboards ─────────────────────────────────────────────────────────────
+
+/** How one person attended within the dashboard's range. */
+export interface DashboardPersonStat {
+  person: KnownPerson;
+  attended: number;
+  /** Share of the sessions in range, 0..1. */
+  rate: number;
+  last_seen: string | null;
+  /** Sessions attended in a row, counting back from the last one. */
+  current_streak: number;
+  /** Sessions missed in a row at the end of the range. */
+  missed_in_a_row: number;
+  /** Presences that were added by hand. */
+  manual: number;
+}
+
+export interface SessionCount {
+  date: string;
+  count: number;
+}
+
+/** Sessions grouped by weekday (key "1".."7", Monday first) or by month (key "YYYY-MM"). */
+export interface PeriodBucket {
+  key: string;
+  sessions: number;
+  presences: number;
+}
+
+export interface Dashboard {
+  registered_people: number;
+  total_presences: number;
+  average_attendance: number;
+  average_delta: number | null;
+  attendance_rate: number;
+  new_people: number;
+  best_session: SessionCount | null;
+  per_session: SessionCount[];
+  weekdays: PeriodBucket[];
+  /** The last 12 months with sessions. */
+  months: PeriodBucket[];
+  /** People per attendance-rate band. */
+  rate_distribution: number[];
+  /** Only people with a presence in range. */
+  people: DashboardPersonStat[];
 }
 
 export interface AuditLogEntry {
@@ -129,8 +235,15 @@ export class ApiService {
   }
 
   // ── Group Photos ──────────────────────────────────────────────────────────
-  getPhotos(): Observable<GroupPhoto[]> {
-    return this.http.get<GroupPhoto[]>(this.auth(`${this.base}/photos`));
+  /** Photos grouped by date, newest first, one page of dates at a time. */
+  getPhotoSessions(offset: number, limit: number, search: string, dateOrder: DateOrder): Observable<PhotoSessionPage> {
+    const params = new URLSearchParams({
+      offset: String(offset),
+      limit: String(limit),
+      q: search,
+      date_order: dateOrder,
+    });
+    return this.http.get<PhotoSessionPage>(this.auth(`${this.base}/photos/sessions?${params}`));
   }
 
   uploadGroupPhoto(date: string, photo: File): Observable<GroupPhoto> {
@@ -163,8 +276,39 @@ export class ApiService {
   }
 
   // ── Attendance ────────────────────────────────────────────────────────────
-  getAttendance(): Observable<AttendanceRow[]> {
-    return this.http.get<AttendanceRow[]>(this.auth(`${this.base}/attendance`));
+  /** The whole attendance history as an .xlsx file, built by the server. */
+  exportAttendance(options: AttendanceExportOptions): Observable<Blob> {
+    const params = new URLSearchParams({
+      date_order: options.dateOrder,
+      date_label: options.dateLabel,
+      present_label: options.presentLabel,
+      manual_label: options.manualLabel,
+      sheet_name: options.sheetName,
+    });
+    options.extraDates.forEach(date => params.append('extra_dates', date));
+    return this.http.get(this.auth(`${this.base}/attendance/export?${params}`), { responseType: 'blob' });
+  }
+
+  /** Every number the dashboards show, for the sessions within the range. */
+  getDashboard(startDate: string | null, endDate: string | null): Observable<Dashboard> {
+    const params = new URLSearchParams();
+    if (startDate) params.set('start_date', startDate);
+    if (endDate) params.set('end_date', endDate);
+    return this.http.get<Dashboard>(this.auth(`${this.base}/dashboards?${params}`));
+  }
+
+  /** One page of date columns of the attendance grid, paginated by the backend. */
+  getAttendanceGrid(query: AttendanceGridQuery): Observable<AttendanceGridPage> {
+    const params = new URLSearchParams({ limit: String(query.limit) });
+    if (query.offset != null) params.set('offset', String(query.offset));
+    if (query.startDate) params.set('start_date', query.startDate);
+    if (query.endDate) params.set('end_date', query.endDate);
+    if (query.focusDate) params.set('focus_date', query.focusDate);
+    if (query.includeAbsent) params.set('include_absent', 'true');
+    query.extraDates?.forEach(date => params.append('extra_dates', date));
+    return this.http.get<AttendanceGridPage>(
+      this.auth(`${this.base}/attendance/grid?${params}`)
+    );
   }
 
   /** Which person/date cells were touched by hand, and how. */

@@ -3,6 +3,9 @@ from sqlalchemy import Column, Integer, String, Date, ForeignKey, LargeBinary, D
 from sqlalchemy.orm import relationship
 from database import Base
 
+#: Placeholder name given to a face that could not be recognised.
+UNKNOWN_NAME = "Unknown"
+
 
 class KnownPerson(Base):
     """A person entry in the 'database' of known faces."""

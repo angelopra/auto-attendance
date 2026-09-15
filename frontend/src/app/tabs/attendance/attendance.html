@@ -25,7 +25,7 @@
     </form>
 
     <div class="action-bar">
-      <button type="button" class="btn-success" (click)="exportToExcel()">
+      <button type="button" class="btn-success" (click)="exportToExcel()" [disabled]="exporting()">
         {{ 'attendance.export' | translate }}
       </button>
 
@@ -33,9 +33,9 @@
         {{ (editMode() ? 'attendance.doneEditing' : 'attendance.edit') | translate }}
       </button>
 
-      @if (filteredDates().length > pageSize()) {
+      @if (totalDates() > pageSize()) {
         <div class="pagination-buttons">
-          <button type="button" (click)="prevDays()" [disabled]="dateStartIndex() === 0"
+          <button type="button" (click)="prevDays()" [disabled]="!canGoPrev()"
                   [attr.aria-label]="'attendance.prevDates' | translate">&larr;</button>
           <button type="button" (click)="nextDays()" [disabled]="!canGoNext()"
                   [attr.aria-label]="'attendance.nextDates' | translate">&rarr;</button>
@@ -65,7 +65,9 @@
   @if (message()) { <p class="notice">{{ message() }}</p> }
   @if (error()) { <p class="error">{{ error() }}</p> }
 
-  @if (visibleDates().length === 0) {
+  @if (!page()) {
+    @if (loading()) { <p>{{ 'common.loading' | translate }}</p> }
+  } @else if (visibleDates().length === 0) {
     <p>{{ 'attendance.empty' | translate }}</p>
   } @else {
     <div class="table-wrapper">

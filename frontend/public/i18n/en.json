@@ -24,7 +24,9 @@
     "delete": "Delete",
     "clear": "Clear",
     "loading": "Loading…",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "yes": "Yes",
+    "no": "No"
   },
   "charts": {
     "showTable": "Show table",
@@ -44,7 +46,9 @@
     "missing": "Please select a photo and a date.",
     "failed": "Upload failed: {{reason}}",
     "processed": "Processed: {{date}}",
-    "facesDetected": "{{count}} face(s) detected."
+    "facesDetected": "{{count}} face(s) detected.",
+    "suggestionQuestion": "Is this {{name}}?",
+    "suggestionFailed": "Could not label the face: {{reason}}"
   },
   "known": {
     "title": "Known Faces",
@@ -154,10 +158,7 @@
     "absentNone": "Nobody has missed two sessions in a row.",
     "absentWatch": "Watch",
     "absentLong": "Long absence",
-    "absentMeta": "{{count}} session(s) missed · last seen {{date}}",
-    "streaksTitle": "Longest streaks",
-    "streaksSubtitle": "Most sessions attended back to back inside this range.",
-    "currentStreak": "current streak {{count}}"
+    "absentMeta": "{{count}} session(s) missed · last seen {{date}}"
   },
   "manage": {
     "title": "Manage Data",
@@ -199,7 +200,8 @@
     "actionDetectionRemoved": "Detected face removed",
     "actionPhotoDateChanged": "Photo moved to another date",
     "actionPhotoDeleted": "Photo deleted",
-    "actionPersonDeleted": "Person deleted"
+    "actionPersonDeleted": "Person deleted",
+    "viewPhoto": "Open photo"
   },
   "errors": {
     "unexpected": "Unexpected error"

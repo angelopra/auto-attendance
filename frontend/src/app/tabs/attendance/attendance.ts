@@ -1,20 +1,14 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, DestroyRef, HostListener, OnInit, inject, signal, computed } from '@angular/core';
 import { ReactiveFormsModule, NonNullableFormBuilder } from '@angular/forms';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { forkJoin } from 'rxjs';
-import { ApiService, AttendanceEdit, AttendanceEntry } from '../../services/api';
-import {
-  PersonAttendance,
-  datesFromRows,
-  groupAttendanceRows,
-  unknownName,
-} from '../../services/attendance-data';
+import { Subject, distinctUntilChanged, map, switchMap } from 'rxjs';
+import { ApiService, AttendanceEdit, AttendanceEntry, AttendanceGridPage } from '../../services/api';
+import { PersonAttendance } from '../../services/attendance-data';
 import { LanguageService } from '../../services/language';
 import { LocalizedDatePipe } from '../../pipes/localized-date';
-import { searchMatch } from '../../tools';
-import * as XLSX from 'xlsx';
+import { saveBlob, searchMatch } from '../../tools';
 
 type AttendanceDataRow = PersonAttendance;
 
@@ -37,20 +31,22 @@ export class Attendance implements OnInit {
   private fb = inject(NonNullableFormBuilder);
   private translate = inject(TranslateService);
   private language = inject(LanguageService);
+  private destroyRef = inject(DestroyRef);
 
-  rows = signal<AttendanceDataRow[]>([]);
-  knownDates = signal<string[]>([]);
+  /** The window of date columns the backend sent for the current request. */
+  page = signal<AttendanceGridPage | null>(null);
+  loading = signal(false);
   /** Dates typed in while editing, so a brand-new session gets a column. */
   extraDates = signal<string[]>([]);
-  /** `name|date` -> the latest by-hand change on that cell. */
-  edits = signal<Map<string, AttendanceEdit>>(new Map());
+  /** Requested index of the first visible date; null asks for the most recent dates. */
+  dateStartIndex = signal<number | null>(null);
 
-  dateStartIndex = signal<number>(0);
   viewportWidth = signal<number>(typeof window === 'undefined' ? 1200 : window.innerWidth);
   pageSize = computed(() => columnsForWidth(this.viewportWidth()));
 
   editMode = signal(false);
   busy = signal(false);
+  exporting = signal(false);
   message = signal('');
   error = signal('');
   newDate = signal('');
@@ -65,82 +61,108 @@ export class Attendance implements OnInit {
     initialValue: this.filterForm.getRawValue()
   });
 
-  allDates = computed(() => {
-    const dates = new Set([...this.knownDates(), ...this.extraDates()]);
-    return [...dates].sort();
-  });
+  private requests = new Subject<{ focusDate?: string }>();
 
-  filteredDates = computed(() => {
-    const dates = this.allDates();
-    const { startDate, endDate } = this.formValues();
+  visibleDates = computed(() => this.page()?.dates ?? []);
+  totalDates = computed(() => this.page()?.total_dates ?? 0);
 
-    let result = [...dates];
-    if (startDate) result = result.filter(d => d >= startDate);
-    if (endDate) result = result.filter(d => d <= endDate);
+  rows = computed<AttendanceDataRow[]>(() =>
+    (this.page()?.rows ?? []).map(row => ({
+      person: row.person,
+      entries: new Map(row.entries.map(entry => [entry.date, entry])),
+    }))
+  );
 
-    return result;
-  });
-
-  visibleDates = computed(() => {
-    const dates = this.filteredDates();
-    const size = this.pageSize();
-    // Safe guard index tracking to prevent out of bounds when list sizes change
-    const start = Math.min(this.dateStartIndex(), Math.max(0, dates.length - size));
-    return dates.slice(start, start + size);
-  });
+  /** `name|date` -> the latest by-hand change on that cell. */
+  edits = computed(() =>
+    new Map<string, AttendanceEdit>((this.page()?.edits ?? []).map(e => [editKey(e.person_name, e.date), e]))
+  );
 
   filteredRows = computed(() => {
-    let rows = this.rows();
-    const visibleDates = this.visibleDates();
-    let { searchName } = this.formValues();
-    // While editing, everyone stays on screen so absences can be filled in.
-    if (!this.editMode()) {
-      rows = rows.filter(r => visibleDates.some(date => r.entries.has(date)));
-    }
+    const rows = this.rows();
+    const { searchName } = this.formValues();
     if (!searchName) return rows;
     return rows.filter(r => searchName.split(' ').filter(s => s).some(s => searchMatch(r.person.name, s)));
   });
 
-  @HostListener('window:resize')
-  onResize() {
-    this.viewportWidth.set(window.innerWidth);
-  }
+  canGoPrev = computed(() => (this.page()?.offset ?? 0) > 0);
+  canGoNext = computed(() => {
+    const page = this.page();
+    return !!page && page.offset + page.dates.length < page.total_dates;
+  });
 
-  prevDays() {
-    this.dateStartIndex.update(idx => Math.max(0, idx - 1));
-  }
+  constructor() {
+    this.requests.pipe(
+      switchMap(({ focusDate }) => {
+        const { startDate, endDate } = this.filterForm.getRawValue();
+        this.loading.set(true);
+        return this.api.getAttendanceGrid({
+          limit: this.pageSize(),
+          offset: this.dateStartIndex(),
+          startDate,
+          endDate,
+          extraDates: this.extraDates(),
+          focusDate,
+          // While editing, everyone stays on screen so absences can be filled in.
+          includeAbsent: this.editMode(),
+        });
+      }),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe({
+      next: page => {
+        this.loading.set(false);
+        this.page.set(page);
+        this.dateStartIndex.set(page.offset);
+      },
+      error: err => { this.loading.set(false); this.error.set(this.errorText(err)); },
+    });
 
-  nextDays() {
-    this.dateStartIndex.update(idx => {
-      const maxIndex = Math.max(0, this.filteredDates().length - this.pageSize());
-      return Math.min(maxIndex, idx + 1);
+    // A new date range starts again from its most recent dates.
+    this.filterForm.valueChanges.pipe(
+      map(({ startDate, endDate }) => `${startDate ?? ''}|${endDate ?? ''}`),
+      distinctUntilChanged(),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(() => {
+      this.dateStartIndex.set(null);
+      this.load();
     });
   }
 
-  canGoNext = computed(() => this.dateStartIndex() + this.pageSize() < this.filteredDates().length);
+  @HostListener('window:resize')
+  onResize() {
+    const previousSize = this.pageSize();
+    this.viewportWidth.set(window.innerWidth);
+    if (this.pageSize() === previousSize) return;
+    // Keep showing the latest dates if that is where the window was.
+    if (!this.canGoNext()) this.dateStartIndex.set(null);
+    this.load();
+  }
+
+  prevDays() {
+    if (!this.canGoPrev()) return;
+    this.dateStartIndex.update(idx => Math.max(0, (idx ?? 0) - 1));
+    this.load();
+  }
+
+  nextDays() {
+    if (!this.canGoNext()) return;
+    this.dateStartIndex.update(idx => (idx ?? 0) + 1);
+    this.load();
+  }
 
   ngOnInit() {
     this.load();
   }
 
-  load() {
-    forkJoin({
-      rows: this.api.getAttendance(),
-      edits: this.api.getAttendanceEdits(),
-    }).subscribe({
-      next: ({ rows, edits }) => {
-        this.rows.set(groupAttendanceRows(rows).filter(d => d.person.name !== unknownName));
-        this.knownDates.set(datesFromRows(rows));
-        this.edits.set(new Map(edits.map(e => [editKey(e.person_name, e.date), e])));
-      },
-      error: err => this.error.set(this.errorText(err)),
-    });
+  load(focusDate?: string) {
+    this.requests.next({ focusDate });
   }
 
   toggleEditMode() {
     this.editMode.update(v => !v);
     this.message.set('');
     this.error.set('');
+    this.load();
   }
 
   entryFor(row: AttendanceDataRow, date: string): AttendanceEntry | undefined {
@@ -219,14 +241,11 @@ export class Attendance implements OnInit {
   addDateColumn() {
     const date = this.newDate();
     if (!date) return;
-    if (!this.allDates().includes(date)) {
+    if (!this.extraDates().includes(date)) {
       this.extraDates.update(d => [...d, date]);
     }
     // Jump the window to the new column.
-    const index = this.filteredDates().indexOf(date);
-    if (index >= 0) {
-      this.dateStartIndex.set(Math.max(0, Math.min(index, this.filteredDates().length - this.pageSize())));
-    }
+    this.load(date);
     this.newDate.set('');
   }
 
@@ -240,39 +259,29 @@ export class Attendance implements OnInit {
 
   resetFilters() {
     this.filterForm.reset();
-    this.dateStartIndex.set(0);
+    this.dateStartIndex.set(null);
+    this.load();
   }
 
+  /** The server builds the spreadsheet in the current language; the browser only saves it. */
   exportToExcel() {
-    const dates = this.allDates();
-    const dataRows = this.rows();
-    const present = this.translate.instant('attendance.excelPresent');
-    const manual = this.translate.instant('attendance.excelManual');
-
-    const worksheetData = [
-      [this.translate.instant('attendance.excelDate'), ...dataRows.map(r => r.person.name)]
-    ];
-
-    dates.forEach(date => {
-      const excelRow: string[] = [this.language.formatDate(date)];
-
-      dataRows.forEach(row => {
-        const entry = row.entries.get(date);
-        excelRow.push(entry ? (entry.source === 'manual' ? manual : present) : '');
-      });
-
-      worksheetData.push(excelRow);
+    if (this.exporting()) return;
+    this.exporting.set(true);
+    this.error.set('');
+    this.api.exportAttendance({
+      dateOrder: this.language.dateOrder(),
+      extraDates: this.extraDates(),
+      dateLabel: this.translate.instant('attendance.excelDate'),
+      presentLabel: this.translate.instant('attendance.excelPresent'),
+      manualLabel: this.translate.instant('attendance.excelManual'),
+      sheetName: this.translate.instant('attendance.excelSheet'),
+    }).subscribe({
+      next: file => {
+        this.exporting.set(false);
+        saveBlob(file, `attendance_report_${new Date().toISOString().split('T')[0]}.xlsx`);
+      },
+      error: err => { this.exporting.set(false); this.error.set(this.errorText(err)); },
     });
-
-    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, this.translate.instant('attendance.excelSheet'));
-
-    XLSX.writeFile(
-      workbook,
-      `attendance_report_${new Date().toISOString().split('T')[0]}.xls`,
-      { bookType: 'xls' }
-    );
   }
 
   private errorText(err: unknown): string {

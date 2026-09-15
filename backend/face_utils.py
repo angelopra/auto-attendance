@@ -2,6 +2,7 @@
 Face detection and embedding utilities using InsightFace (RetinaFace detector +
 ArcFace embeddings, all via ONNX – no TensorFlow required).
 """
+import json
 import os
 import uuid
 from pathlib import Path
@@ -105,16 +106,17 @@ def cosine_similarity(a: list[float], b: list[float]) -> float:
     return float(np.dot(va, vb) / denom)
 
 
-def find_best_match(
+#: Minimum similarity for a face to be recognised as a known person.
+MATCH_SCORE = 1.0 - SIMILARITY_THRESHOLD
+#: How far below MATCH_SCORE an unrecognised face may be and still get suggested.
+SUGGESTION_MARGIN = 0.20
+
+
+def closest_person(
     query_embedding: list[float],
     known_persons: list,          # list of KnownPerson ORM objects
 ) -> tuple[Optional[object], float]:
-    """
-    Compare query_embedding against all known persons.
-    Returns (best_person_or_None, similarity_score).
-    """
-    import json
-
+    """Return the most similar person, whatever the score, and that score."""
     best_person = None
     best_score = -1.0
 
@@ -130,6 +132,25 @@ def find_best_match(
             best_score = score
             best_person = person
 
-    if best_score >= (1.0 - SIMILARITY_THRESHOLD):
+    return best_person, best_score
+
+
+def find_best_match(
+    query_embedding: list[float],
+    known_persons: list,          # list of KnownPerson ORM objects
+) -> tuple[Optional[object], float]:
+    """
+    Compare query_embedding against all known persons.
+    Returns (best_person_or_None, similarity_score).
+    """
+    best_person, best_score = closest_person(query_embedding, known_persons)
+    if best_score >= MATCH_SCORE:
         return best_person, best_score
     return None, best_score
+
+
+def is_near_miss(score: float) -> bool:
+    """True for scores just short of a match: [MATCH_SCORE - margin, MATCH_SCORE)."""
+    # Rounded so e.g. 0.40 is not pushed out of range by 0.6 - 0.2 == 0.39999...
+    lower = round(MATCH_SCORE - SUGGESTION_MARGIN, 6)
+    return lower <= round(score, 6) < round(MATCH_SCORE, 6)

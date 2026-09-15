@@ -111,13 +111,26 @@ h3 { margin: 0; }
   padding: 0.5rem 0;
   flex-wrap: wrap;
 
+  .thumb-button {
+    padding: 0;
+    min-height: 0;
+    background: none;
+    border-radius: 6px;
+    flex: none;
+    cursor: zoom-in;
+    line-height: 0;
+
+    &:hover:not(:disabled) { background: none; opacity: 0.85; }
+    &:focus-visible { outline: 2px solid #2a78d6; outline-offset: 2px; }
+  }
+
   .photo-thumb {
     width: 56px;
     height: 56px;
     object-fit: cover;
     border-radius: 6px;
     background: #e5e7eb;
-    flex: none;
+    display: block;
   }
 
   .photo-info {
@@ -198,6 +211,28 @@ h3 { margin: 0; }
   .audit-action { font-weight: 600; font-size: 0.9rem; }
   .audit-person { font-size: 0.9rem; color: #52514e; }
   .audit-details { font-size: 0.82rem; color: #52514e; margin-top: 2px; }
+}
+
+/* Full-size photo over a dimmed page; clicking the backdrop closes it. */
+.photo-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.82);
+  cursor: zoom-out;
+
+  img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 6px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    cursor: default;
+  }
 }
 
 @media (max-width: 640px) {
