@@ -16,7 +16,12 @@
     "known": "Known Faces",
     "attendance": "Attendance",
     "dashboards": "Dashboards",
-    "manage": "Manage"
+    "manage": "Manage",
+    "uploadShort": "Upload",
+    "knownShort": "Faces",
+    "attendanceShort": "Attendance",
+    "dashboardsShort": "Stats",
+    "manageShort": "Manage"
   },
   "common": {
     "save": "Save",

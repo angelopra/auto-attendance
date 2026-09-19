@@ -16,7 +16,12 @@
     "known": "Rostos Conhecidos",
     "attendance": "Presenças",
     "dashboards": "Painéis",
-    "manage": "Gerenciar"
+    "manage": "Gerenciar",
+    "uploadShort": "Enviar",
+    "knownShort": "Rostos",
+    "attendanceShort": "Presenças",
+    "dashboardsShort": "Painéis",
+    "manageShort": "Gerenciar"
   },
   "common": {
     "save": "Salvar",

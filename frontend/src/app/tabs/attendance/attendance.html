@@ -26,6 +26,7 @@
 
     <div class="action-bar">
       <button type="button" class="btn-success" (click)="exportToExcel()" [disabled]="exporting()">
+        @if (exporting()) { <span class="spinner" aria-hidden="true"></span> }
         {{ 'attendance.export' | translate }}
       </button>
 
@@ -66,9 +67,9 @@
   @if (error()) { <p class="error">{{ error() }}</p> }
 
   @if (!page()) {
-    @if (loading()) { <p>{{ 'common.loading' | translate }}</p> }
+    @if (loading()) { <p class="muted">{{ 'common.loading' | translate }}</p> }
   } @else if (visibleDates().length === 0) {
-    <p>{{ 'attendance.empty' | translate }}</p>
+    <p class="muted">{{ 'attendance.empty' | translate }}</p>
   } @else {
     <div class="table-wrapper">
       <table class="attendance-table" [class.editing]="editMode()">

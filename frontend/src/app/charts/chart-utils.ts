@@ -12,18 +12,18 @@ export interface ChartPoint {
 
 /** Chart palette (light surface). One hue for magnitude; status hues stay reserved. */
 export const CHART_COLORS = {
-  series: '#2a78d6',
-  seriesSoft: 'rgba(42, 120, 214, 0.10)',
-  grid: '#e1e0d9',
-  axis: '#c3c2b7',
-  ink: '#0b0b0b',
-  inkSecondary: '#52514e',
-  muted: '#898781',
+  series: '#4f46e5',
+  seriesSoft: 'rgba(79, 70, 229, 0.10)',
+  grid: '#eceef4',
+  axis: '#cdd3e0',
+  ink: '#111827',
+  inkSecondary: '#4b5563',
+  muted: '#8b93a4',
   surface: '#ffffff',
 } as const;
 
 /** Ordinal ramp — one hue, light→dark, validated against a white surface. */
-export const ORDINAL_RAMP = ['#86b6ef', '#5598e7', '#2a78d6', '#1c5cab', '#0d366b'];
+export const ORDINAL_RAMP = ['#a5b4fc', '#818cf8', '#6366f1', '#4f46e5', '#3730a3'];
 
 /** Round an axis maximum up to a readable number, and return its ticks. */
 export function niceTicks(max: number, desired = 4): number[] {
@@ -41,7 +41,7 @@ export function niceTicks(max: number, desired = 4): number[] {
 }
 
 /** Path for a bar with its data-end rounded and its baseline end square. */
-export function topRoundedBar(x: number, y: number, w: number, h: number, radius = 4): string {
+export function topRoundedBar(x: number, y: number, w: number, h: number, radius = 6): string {
   const r = Math.max(0, Math.min(radius, w / 2, h));
   const bottom = y + h;
   return `M${x},${bottom} L${x},${y + r} Q${x},${y} ${x + r},${y} L${x + w - r},${y} Q${x + w},${y} ${x + w},${y + r} L${x + w},${bottom} Z`;
