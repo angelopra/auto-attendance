@@ -78,9 +78,11 @@ export class UploadPhoto {
     });
   }
 
-  loadDetections(photoId: number) {
+  loadDetections(photoId: number, done?: () => void) {
     this.api.getDetectionsForPhoto(photoId).subscribe({
       next: d => this.detections.set(d),
+      complete: done,
+      error: done,
     });
   }
 
@@ -94,10 +96,8 @@ export class UploadPhoto {
     this.error.set('');
     this.acceptingId.set(d.id);
     this.api.updatePerson(d.person.id, d.suggestion.person.name).subscribe({
-      next: () => {
-        this.acceptingId.set(null);
-        this.loadDetections(d.photo_id);
-      },
+      // Stay busy until the refreshed faces arrive, so the question can't be answered twice.
+      next: () => this.loadDetections(d.photo_id, () => this.acceptingId.set(null)),
       error: err => {
         this.acceptingId.set(null);
         this.error.set(

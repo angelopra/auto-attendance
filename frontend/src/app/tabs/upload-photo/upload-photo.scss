@@ -66,6 +66,19 @@
       min-width: 0;
       padding: 0.2rem 0.3rem;
       min-height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+    }
+
+    .spinner {
+      width: 0.8rem;
+      height: 0.8rem;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      border-radius: 50%;
+      animation: suggestion-spin 0.7s linear infinite;
     }
   }
 }
@@ -87,3 +100,5 @@
     figcaption .btn-outline { width: 100%; }
   }
 }
+
+@keyframes suggestion-spin { to { transform: rotate(360deg); } }
