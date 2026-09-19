@@ -82,7 +82,9 @@ export class Attendance implements OnInit {
     const rows = this.rows();
     const { searchName } = this.formValues();
     if (!searchName) return rows;
-    return rows.filter(r => searchName.split(' ').filter(s => s).some(s => searchMatch(r.person.name, s)));
+    return rows
+      .filter(r => searchName.split(' ').filter(s => s).some(s => searchMatch(r.person.name, s)))
+      .sort((a, b) => a.person.name.localeCompare(b.person.name));
   });
 
   canGoPrev = computed(() => (this.page()?.offset ?? 0) > 0);
