@@ -85,10 +85,12 @@
           @for (row of filteredRows(); track row.person.id) {
             <tr>
               <td class="person-cell sticky-col">
-                @if (row.person.selfie_path) {
-                  <img [src]="selfieUrl(row.person.selfie_path)" alt="" class="thumb-sm" />
-                }
-                <span class="name-text">{{ row.person.name }}</span>
+                <div class="person-inner">
+                  @if (row.person.selfie_path) {
+                    <img [src]="selfieUrl(row.person.selfie_path)" alt="" class="thumb-sm" />
+                  }
+                  <span class="name-text" [title]="row.person.name">{{ row.person.name }}</span>
+                </div>
               </td>
               @for (date of visibleDates(); track date) {
                 @let present = wasPresent(row, date);

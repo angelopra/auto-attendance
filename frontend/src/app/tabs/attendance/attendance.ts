@@ -70,7 +70,7 @@ export class Attendance implements OnInit {
     (this.page()?.rows ?? []).map(row => ({
       person: row.person,
       entries: new Map(row.entries.map(entry => [entry.date, entry])),
-    }))
+    })).sort((a, b) => a.person.name.localeCompare(b.person.name))
   );
 
   /** `name|date` -> the latest by-hand change on that cell. */
@@ -82,9 +82,7 @@ export class Attendance implements OnInit {
     const rows = this.rows();
     const { searchName } = this.formValues();
     if (!searchName) return rows;
-    return rows
-      .filter(r => searchName.split(' ').filter(s => s).some(s => searchMatch(r.person.name, s)))
-      .sort((a, b) => a.person.name.localeCompare(b.person.name));
+    return rows.filter(r => searchName.split(' ').filter(s => s).some(s => searchMatch(r.person.name, s)));
   });
 
   canGoPrev = computed(() => (this.page()?.offset ?? 0) > 0);

@@ -131,7 +131,6 @@ table.attendance-table {
     left: 0;
     z-index: 1;
     width: 100%;
-    max-width: 45vw;
     background: var(--surface);
     text-align: left;
     box-shadow: inset -1px 0 0 var(--border);
@@ -148,15 +147,21 @@ table.attendance-table {
   tbody tr:last-child td { border-bottom: none; }
   tbody tr:hover td { background: #fafbfd; }
 
-  .person-cell {
-    .thumb-sm { width: 26px; height: 26px; margin-right: 0.4rem; }
+  /* A fixed-width box inside the cell: table cells ignore max-width, so this is
+     what stops long names spilling over the date columns. */
+  .person-inner {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    width: 36vw;
+
+    .thumb-sm { flex: none; width: 26px; height: 26px; margin: 0; }
 
     .name-text {
-      display: inline-block;
-      max-width: 30vw;
+      flex: 1 1 auto;
+      min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
-      vertical-align: middle;
       font-weight: 600;
     }
   }
@@ -246,7 +251,7 @@ table.attendance-table {
     th, td { padding: 0.55rem 0.5rem; }
     thead th { font-size: 0.78rem; }
 
-    .person-cell .thumb-sm { width: 30px; height: 30px; margin-right: 0.55rem; }
-    .person-cell .name-text { max-width: 40vw; }
+    .person-inner { width: auto; min-width: 180px; max-width: 320px; gap: 0.55rem; }
+    .person-inner .thumb-sm { width: 30px; height: 30px; }
   }
 }
