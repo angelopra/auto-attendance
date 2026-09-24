@@ -887,10 +887,13 @@ def download_backup(format: str = Query("tar.gz", pattern="^(tar\\.gz|zip)$")):
 STATIC_DIR = Path("static")
 
 if STATIC_DIR.exists():
+    NO_CACHE = {"Cache-Control": "no-cache"}
 
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
         file_path = STATIC_DIR / full_path
         if file_path.is_file():
+            if full_path.startswith("i18n/") or full_path == "index.html":
+                return FileResponse(file_path, headers=NO_CACHE)
             return FileResponse(file_path)
-        return FileResponse(STATIC_DIR / "index.html")
+        return FileResponse(STATIC_DIR / "index.html", headers=NO_CACHE)
