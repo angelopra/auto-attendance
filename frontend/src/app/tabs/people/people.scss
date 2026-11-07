@@ -1,13 +1,45 @@
-.add-form {
-  display: grid;
-  gap: 0.85rem;
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 0.85rem;
 
-  .thumb { justify-self: start; }
+  .tabs { display: flex; }
+
+  .filters {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .sort {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    white-space: nowrap;
+
+    select { width: auto; }
+  }
 }
+
+.tab-hint {
+  margin: 0 0 0.85rem;
+  padding: 0.6rem 0.85rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--primary);
+  border-radius: var(--radius-sm);
+  color: var(--ink-2);
+  font-size: 0.85rem;
+}
+
+dialog.modal .preview { align-self: flex-start; }
 
 .person-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(156px, 1fr));
   gap: 0.6rem;
 }
 
@@ -43,6 +75,19 @@
     line-height: 1.25;
   }
 
+  .sessions {
+    margin-top: -0.3rem;
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .delete-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+  }
+
   .merge-check {
     position: absolute;
     top: 4px;
@@ -73,10 +118,19 @@
     width: 100%;
     margin-top: auto;
 
-    button { flex: 1 1 0; min-width: 0; padding-inline: 0.4rem; }
+    /* Side by side, sharing the row; long labels shrink rather than wrap. */
+    button {
+      flex: 1 1 0;
+      min-width: 0;
+      padding-inline: 0.3rem;
+      font-size: 0.78rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   }
 
-  .btn-sm:not(.danger) {
+  .card-actions .btn-sm:not(.btn-warning):not(.btn-outline) {
     background: var(--primary-soft);
     color: var(--primary-ink);
 
@@ -134,11 +188,15 @@
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
 
 @media (min-width: 720px) {
-  .add-form {
-    max-width: 760px;
-    margin-inline: auto;
+  .toolbar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
 
-    button { justify-self: start; padding-inline: 1.6rem; }
+    .tabs { display: inline-flex; }
+    .filters { flex: 0 1 460px; }
   }
 
   .person-grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 0.85rem; }

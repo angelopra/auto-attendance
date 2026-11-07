@@ -17,6 +17,10 @@ class KnownPerson(Base):
     embedding = Column(Text, nullable=True)           # JSON-serialised face embedding vector
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    # Set when the person was dismissed: they stay in the database (their faces still
+    # show on the photos they were found in) but count nowhere — no grid, export or
+    # dashboard. Unlike deleting, it can be undone.
+    dismissed_at = Column(DateTime, nullable=True)
 
     detections = relationship("AttendanceDetection", back_populates="person")
     manual_attendances = relationship(
@@ -66,8 +70,16 @@ class ManualAttendance(Base):
     date = Column(Date, nullable=False, index=True)
     note = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    # Set when the presence is the photographer's, registered with this group photo
+    # rather than by hand: it follows the photo (date changes, deletion) and is not
+    # flagged as edited.
+    photo_id = Column(Integer, ForeignKey("group_photos.id"), nullable=True)
 
     person = relationship("KnownPerson", back_populates="manual_attendances")
+
+    @property
+    def source(self) -> str:
+        return "photographer" if self.photo_id is not None else "manual"
 
 
 class AuditLog(Base):

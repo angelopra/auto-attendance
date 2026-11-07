@@ -1,0 +1,69 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.picker-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.combo { position: relative; }
+
+.options {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 70;
+  max-height: 260px;
+  margin: 4px 0 0;
+  padding: 4px;
+  overflow-y: auto;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 40px;
+    padding: 0.3rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.92rem;
+    cursor: pointer;
+
+    &.active { background: var(--primary-soft); color: var(--primary-ink); }
+    &.empty { color: var(--muted); cursor: default; }
+
+    .thumb-sm { flex: none; width: 28px; height: 28px; margin: 0; }
+  }
+}
+
+.chosen {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.25rem 0.3rem 0.25rem 0.6rem;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-sm);
+  background: var(--primary-soft);
+
+  .thumb-sm { flex: none; width: 30px; height: 30px; margin: 0; }
+
+  .chosen-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 650;
+    color: var(--primary-ink);
+  }
+}

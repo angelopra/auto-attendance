@@ -135,12 +135,16 @@ def name_group_ids(db: Session, person: models.KnownPerson) -> list[int]:
 
 
 def delete_file_if_unreferenced(db: Session, path: Optional[str]) -> None:
-    """Delete an image file unless some person still uses it as their selfie."""
+    """Delete an image file unless a person (selfie) or a detected face still uses it."""
     if not path:
         return
     still_used = (
         db.query(models.KnownPerson.id)
         .filter(models.KnownPerson.selfie_path == path)
+        .first()
+    ) or (
+        db.query(models.AttendanceDetection.id)
+        .filter(models.AttendanceDetection.face_crop_path == path)
         .first()
     )
     if still_used:
@@ -189,11 +193,24 @@ def presence_exists(db: Session, person_ids: list[int], date: dt.date) -> bool:
     return manual is not None
 
 
+def get_person_or_404(db: Session, person_id: int) -> models.KnownPerson:
+    person = db.get(models.KnownPerson, person_id)
+    if not person:
+        raise HTTPException(404, "Person not found")
+    return person
+
+
 # ── Known Persons ─────────────────────────────────────────────────────────────
 
 @app.get("/persons", response_model=list[schemas.KnownPersonOut])
 def list_persons(db: Session = Depends(get_db)):
     return db.query(models.KnownPerson).all()
+
+
+@app.get("/persons/overview", response_model=schemas.PeopleOverview)
+def people_overview(db: Session = Depends(get_db)):
+    """Everyone, one entry per name, with their all-time count and category."""
+    return reports.people_overview(db)
 
 
 @app.post("/persons", response_model=schemas.KnownPersonOut)
@@ -223,14 +240,64 @@ def update_person(
     payload: schemas.KnownPersonUpdate,
     db: Session = Depends(get_db),
 ):
-    person = db.get(models.KnownPerson, person_id)
-    if not person:
-        raise HTTPException(404, "Person not found")
-    if payload.name is not None:
-        person.name = payload.name
+    """
+    Rename a person — every row sharing their name, so the whole person follows.
+
+    Renaming onto a name that already exists merges the two; the merged rows take on
+    the existing person's dismissed state, so a name is never half dismissed.
+    """
+    person = get_person_or_404(db, person_id)
+    name = payload.name.strip() if payload.name is not None else ""
+    if name and name != person.name:
+        rows = [db.get(models.KnownPerson, pid) for pid in name_group_ids(db, person)]
+        existing = (
+            db.query(models.KnownPerson)
+            .filter(models.KnownPerson.name == name)
+            .order_by(models.KnownPerson.id)
+            .first()
+        ) if name != UNKNOWN_NAME else None
+        for row in rows:
+            row.name = name
+            if existing is not None:
+                row.dismissed_at = existing.dismissed_at
     db.commit()
     db.refresh(person)
     return person
+
+
+def _set_dismissed(db: Session, person_id: int, dismissed: bool) -> models.KnownPerson:
+    person = get_person_or_404(db, person_id)
+    when = dt.datetime.utcnow() if dismissed else None
+    for pid in name_group_ids(db, person):
+        db.get(models.KnownPerson, pid).dismissed_at = when
+    log_change(
+        db,
+        "person_dismissed" if dismissed else "person_restored",
+        person=person,
+        details=(
+            "Dismissed: left out of attendance, exports and dashboards"
+            if dismissed
+            else "Restored: counted again everywhere"
+        ),
+    )
+    db.commit()
+    db.refresh(person)
+    return person
+
+
+@app.post("/persons/{person_id}/dismiss", response_model=schemas.KnownPersonOut)
+def dismiss_person(person_id: int, db: Session = Depends(get_db)):
+    """
+    Disable a person: their data stays, but they count nowhere — not in the attendance
+    grid, the export or the dashboards. Their faces still show on the photos they were
+    found in. Undo with /restore.
+    """
+    return _set_dismissed(db, person_id, True)
+
+
+@app.post("/persons/{person_id}/restore", response_model=schemas.KnownPersonOut)
+def restore_person(person_id: int, db: Session = Depends(get_db)):
+    return _set_dismissed(db, person_id, False)
 
 
 # unused (doesn't behave as desired)
@@ -260,18 +327,47 @@ def merge_persons(payload: schemas.MergeRequest, db: Session = Depends(get_db)):
 
 @app.delete("/persons/{person_id}", status_code=204)
 def delete_person(person_id: int, db: Session = Depends(get_db)):
-    person = db.get(models.KnownPerson, person_id)
-    if not person:
-        raise HTTPException(404, "Person not found")
-    presences = len(person.detections) + len(person.manual_attendances)
+    """
+    Erase a person for good — every row sharing their name — with everything that
+    identifies them: face embedding, selfie, the face crops cut from group photos,
+    detections and manual entries. Their name is also struck from the change history.
+
+    The group photos themselves are kept: they show other people too.
+    """
+    person = get_person_or_404(db, person_id)
+    ids = name_group_ids(db, person)
+    rows = [db.get(models.KnownPerson, pid) for pid in ids]
+
+    detections = (
+        db.query(models.AttendanceDetection)
+        .filter(models.AttendanceDetection.person_id.in_(ids))
+        .all()
+    )
+    files = {d.face_crop_path for d in detections} | {row.selfie_path for row in rows}
+    manual = sum(len(row.manual_attendances) for row in rows)
+
+    for detection in detections:
+        db.delete(detection)
+    for row in rows:
+        db.delete(row)  # manual entries go with it (cascade)
+    db.flush()
+
+    # The audit trail keeps what happened, but no longer to whom.
+    db.query(models.AuditLog).filter(models.AuditLog.person_id.in_(ids)).update(
+        {"person_id": None, "person_name": None}, synchronize_session=False
+    )
     log_change(
         db,
         "person_deleted",
-        person=person,
-        details=f"Person removed along with {presences} presence(s)",
+        details=(
+            f"A person and all their data were erased: {len(detections)} detected face(s), "
+            f"{manual} manual entry(ies)"
+        ),
     )
-    db.delete(person)
     db.commit()
+
+    for path in files:
+        delete_file_if_unreferenced(db, path)
 
 
 # ── Group Photos ──────────────────────────────────────────────────────────────
@@ -336,12 +432,19 @@ def list_photo_sessions(
 async def upload_group_photo(
     date: str = Form(...),          # ISO date string YYYY-MM-DD
     photo: UploadFile = File(...),
+    photographer_id: Optional[int] = Form(None),
     db: Session = Depends(get_db),
 ):
     try:
         photo_date = dt.date.fromisoformat(date)
     except ValueError:
         raise HTTPException(400, "Invalid date format. Use YYYY-MM-DD")
+
+    photographer = None
+    if photographer_id is not None:
+        photographer = get_person_or_404(db, photographer_id)
+        if photographer.name == UNKNOWN_NAME or photographer.dismissed_at is not None:
+            raise HTTPException(400, "The photographer must be a named person who is not dismissed")
 
     photo_path, original_filename = save_upload(photo, PHOTOS_DIR)
 
@@ -357,6 +460,12 @@ async def upload_group_photo(
     # Run face detection + matching in the background (synchronous here for simplicity)
     _process_group_photo(group_photo.id, photo_path, db)
 
+    # The photographer is rarely in their own photo: count them present with it.
+    if photographer is not None and not presence_exists(db, name_group_ids(db, photographer), photo_date):
+        db.add(models.ManualAttendance(person_id=photographer.id, date=photo_date, photo_id=group_photo.id))
+        db.commit()
+
+    db.refresh(group_photo)
     return group_photo
 
 
@@ -377,6 +486,7 @@ def update_group_photo(
 
     photo.date = payload.date
     photo.date_edited_at = dt.datetime.utcnow()
+    _move_photographer_presences(db, photo.id, payload.date)
     log_change(
         db,
         "photo_date_changed",
@@ -404,6 +514,10 @@ def delete_group_photo(photo_id: int, db: Session = Depends(get_db)):
     for crop_path in crop_paths:
         delete_file_if_unreferenced(db, crop_path)
 
+    db.query(models.ManualAttendance).filter(models.ManualAttendance.photo_id == photo_id).delete(
+        synchronize_session=False
+    )
+
     photo_path = photo.photo_path
     filename = photo.filename
     photo_date = photo.date
@@ -427,6 +541,23 @@ def delete_group_photo(photo_id: int, db: Session = Depends(get_db)):
         Path(photo_path).unlink(missing_ok=True)
     except OSError as exc:
         print(f"[file cleanup] could not delete {photo_path}: {exc}")
+
+
+def _move_photographer_presences(db: Session, photo_id: int, date: dt.date) -> None:
+    """Move the photographer's presence along with their photo, unless they already have one there."""
+    rows = db.query(models.ManualAttendance).filter(models.ManualAttendance.photo_id == photo_id).all()
+    for row in rows:
+        clash = (
+            db.query(models.ManualAttendance.id)
+            .filter(models.ManualAttendance.person_id == row.person_id)
+            .filter(models.ManualAttendance.date == date)
+            .filter(models.ManualAttendance.id != row.id)
+            .first()
+        )
+        if clash:
+            db.delete(row)
+        else:
+            row.date = date
 
 
 def _process_group_photo(photo_id: int, photo_path: str, db: Session):
@@ -505,7 +636,7 @@ def get_attendance(db: Session = Depends(get_db)):
                 continue
             entries[manual.date] = schemas.AttendanceEntry(
                 date=manual.date,
-                source="manual",
+                source=manual.source,
                 manual_id=manual.id,
                 note=manual.note,
             )
@@ -579,6 +710,7 @@ def export_attendance(
     date_label: str = "Date",
     present_label: str = "yes",
     manual_label: str = "yes (manual)",
+    total_label: str = "Total",
     sheet_name: str = "Attendance Report",
     db: Session = Depends(get_db),
 ):
@@ -590,6 +722,7 @@ def export_attendance(
         date_label=date_label,
         present_label=present_label,
         manual_label=manual_label,
+        total_label=total_label,
         sheet_name=sheet_name,
     )
     filename = f"attendance_report_{dt.date.today().isoformat()}.xlsx"
@@ -626,7 +759,12 @@ def get_detections_for_photo(photo_id: int, db: Session = Depends(get_db)):
     if not unknown:
         return out
 
-    named = db.query(models.KnownPerson).filter(models.KnownPerson.name != UNKNOWN_NAME).all()
+    named = (
+        db.query(models.KnownPerson)
+        .filter(models.KnownPerson.name != UNKNOWN_NAME)
+        .filter(models.KnownPerson.dismissed_at.is_(None))
+        .all()
+    )
     for item, person in unknown:
         try:
             embedding = json.loads(person.embedding)
@@ -725,6 +863,8 @@ def add_manual_attendance(
         raise HTTPException(404, "Person not found")
     if person.name == UNKNOWN_NAME:
         raise HTTPException(400, "Label this face before registering attendance for it")
+    if person.dismissed_at is not None:
+        raise HTTPException(400, f"{person.name} was dismissed; restore them first")
 
     group = name_group_ids(db, person)
     if presence_exists(db, group, payload.date):

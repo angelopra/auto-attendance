@@ -18,7 +18,10 @@
         </select>
       </label>
 
-      <a class="btn-link" [href]="backupHref()" download>{{ 'manage.backupDownload' | translate }}</a>
+      <a class="btn-link icon-btn" [href]="backupHref()" download
+         [attr.aria-label]="'manage.backupDownload' | translate" [title]="'manage.backupDownload' | translate">
+        <app-icon name="download" />
+      </a>
     </div>
 
     <p class="hint">
@@ -95,8 +98,9 @@
                 <button type="button" class="btn-sm" (click)="startEditDate(photo)">
                   {{ 'manage.changeDate' | translate }}
                 </button>
-                <button type="button" class="btn-sm danger" (click)="deletePhoto(photo)" [disabled]="busy()">
-                  {{ 'common.delete' | translate }}
+                <button type="button" class="btn-sm icon-btn danger" (click)="deletePhoto(photo)" [disabled]="busy()"
+                        [attr.aria-label]="'manage.deletePhoto' | translate" [title]="'manage.deletePhoto' | translate">
+                  <app-icon name="trash" />
                 </button>
               </div>
             }
@@ -116,6 +120,11 @@
                         <img [src]="imageUrl(d.face_crop_path)" alt="" loading="lazy" />
                       }
                       <span>{{ d.person?.name ?? ('common.unknown' | translate) }}</span>
+                      @if (d.person?.dismissed_at) {
+                        <span class="badge dismissed" [title]="'manage.dismissedHint' | translate">
+                          {{ 'manage.dismissed' | translate }}
+                        </span>
+                      }
                       @if (d.confidence) { <small>{{ (+d.confidence * 100).toFixed(1) }}%</small> }
                       <button type="button" class="btn-sm danger" (click)="deleteDetection(d)" [disabled]="busy()">
                         {{ 'manage.removeFace' | translate }}
@@ -166,9 +175,6 @@
 
   <!-- ── Full-size photo; a click anywhere but the photo closes it ───────── -->
   @if (viewerPhoto(); as photo) {
-    <div class="photo-viewer" role="dialog" aria-modal="true" [attr.aria-label]="photo.filename"
-         (click)="closeViewer()">
-      <img [src]="imageUrl(photo.photo_path)" [alt]="photo.filename" (click)="$event.stopPropagation()" />
-    </div>
+    <app-photo-viewer [src]="imageUrl(photo.photo_path)" [alt]="photo.filename" (closed)="closeViewer()" />
   }
 </section>

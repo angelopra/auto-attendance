@@ -66,3 +66,24 @@ export function searchMatch(source: string, search: string): boolean {
   const searchTerms = search.split(' ').filter((x) => x);
   return searchTerms.every((term) => source.includes(term));
 }
+
+/** Read a value saved in localStorage, falling back when absent, invalid or blocked. */
+export function readStored<T>(key: string, fallback: T, isValid: (value: unknown) => value is T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw === null) return fallback;
+    const value: unknown = JSON.parse(raw);
+    return isValid(value) ? value : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+/** Save a value in localStorage; private mode or blocked storage just won't remember it. */
+export function writeStored(key: string, value: unknown): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Nothing to do: the choice just won't survive a reload.
+  }
+}

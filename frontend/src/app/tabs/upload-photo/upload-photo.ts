@@ -1,26 +1,30 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { ApiService, GroupPhoto, AttendanceDetection } from '../../services/api';
+import { ApiService, GroupPhoto, AttendanceDetection, KnownPerson } from '../../services/api';
+import { unknownName } from '../../services/attendance-data';
 import { LocalizedDatePipe } from '../../pipes/localized-date';
+import { PhotoViewer } from '../../components/photo-viewer/photo-viewer';
+import { PersonPicker } from '../../components/person-picker/person-picker';
 
 @Component({
   selector: 'app-upload-photo',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, LocalizedDatePipe],
+  imports: [CommonModule, FormsModule, TranslatePipe, LocalizedDatePipe, PhotoViewer, PersonPicker],
   templateUrl: './upload-photo.html',
   styleUrl: './upload-photo.scss',
 })
-export class UploadPhoto {
+export class UploadPhoto implements OnInit {
   private api = inject(ApiService);
   private translate = inject(TranslateService);
 
   date = signal('');
   fileName = signal('');
-  /** Signals, not plain fields: the preview is set from a FileReader callback,
-   *  which is outside Angular's change detection. */
+  /** Object URL of the chosen file, shown before uploading. */
   preview = signal<string | null>(null);
+  /** The preview opened full size, like the photos on the Manage tab. */
+  viewerOpen = signal(false);
   private selectedFile: File | null = null;
 
   uploading = signal(false);
@@ -32,6 +36,28 @@ export class UploadPhoto {
   /** Detection whose suggestion is being accepted right now. */
   acceptingId = signal<number | null>(null);
 
+  /** Who can be picked as the photographer: named people who aren't dismissed. */
+  photographers = signal<KnownPerson[]>([]);
+  photographer = signal<KnownPerson | null>(null);
+  /** The photographer counted present with the last processed photo. */
+  uploadedPhotographer = signal<KnownPerson | null>(null);
+
+  ngOnInit() {
+    this.loadPhotographers();
+  }
+
+  /** Also run when the picker opens: people may have been added on the People tab since. */
+  loadPhotographers() {
+    this.api.getPeopleOverview().subscribe({
+      next: overview => this.photographers.set(
+        overview.people
+          .filter(p => p.category !== 'dismissed' && p.person.name !== unknownName)
+          .map(p => p.person)
+          .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+      ),
+    });
+  }
+
   onFileChange(event: Event) {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
@@ -39,9 +65,15 @@ export class UploadPhoto {
     this.selectedFile = file;
     this.fileName.set(file.name);
     this.error.set('');
-    const reader = new FileReader();
-    reader.onload = e => this.preview.set(e.target?.result as string);
-    reader.readAsDataURL(file);
+    this.setPreview(URL.createObjectURL(file));
+  }
+
+  /** Swap the preview, releasing the previous object URL. */
+  private setPreview(url: string | null) {
+    const previous = this.preview();
+    if (previous) URL.revokeObjectURL(previous);
+    this.preview.set(url);
+    this.viewerOpen.set(false);
   }
 
   onDateChange(event: Event) {
@@ -50,7 +82,7 @@ export class UploadPhoto {
 
   clearSelection() {
     this.selectedFile = null;
-    this.preview.set(null);
+    this.setPreview(null);
     this.fileName.set('');
   }
 
@@ -61,9 +93,12 @@ export class UploadPhoto {
     }
     this.error.set('');
     this.uploading.set(true);
-    this.api.uploadGroupPhoto(this.date(), this.selectedFile).subscribe({
+    const photographer = this.photographer();
+    this.api.uploadGroupPhoto(this.date(), this.selectedFile, photographer?.id).subscribe({
       next: photo => {
         this.uploadedPhoto.set(photo);
+        this.uploadedPhotographer.set(photographer);
+        this.photographer.set(null);
         this.uploading.set(false);
         this.loadDetections(photo.id);
       },

@@ -19,18 +19,20 @@
         <input id="endDate" type="date" formControlName="endDate" />
       </div>
 
-      <button type="button" class="btn-secondary" (click)="resetFilters()">
-        {{ 'common.clear' | translate }}
+      <button type="button" class="btn-secondary icon-btn" (click)="resetFilters()"
+              [attr.aria-label]="'attendance.clearFilters' | translate" [title]="'attendance.clearFilters' | translate">
+        <app-icon name="filter-x" />
       </button>
     </form>
 
     <div class="action-bar">
-      <button type="button" class="btn-success" (click)="exportToExcel()" [disabled]="exporting()">
-        @if (exporting()) { <span class="spinner" aria-hidden="true"></span> }
-        {{ 'attendance.export' | translate }}
+      <button type="button" class="btn-success icon-btn" (click)="exportToExcel()" [disabled]="exporting()"
+              [attr.aria-label]="'attendance.export' | translate" [title]="'attendance.export' | translate">
+        @if (exporting()) { <span class="spinner" aria-hidden="true"></span> } @else { <app-icon name="file-down" /> }
       </button>
 
-      <button type="button" [class.btn-outline]="!editMode()" (click)="toggleEditMode()">
+      <button type="button" class="edit-btn" [class.btn-outline]="!editMode()" (click)="toggleEditMode()">
+        <app-icon [name]="editMode() ? 'check' : 'pencil'" />
         {{ (editMode() ? 'attendance.doneEditing' : 'attendance.edit') | translate }}
       </button>
 
@@ -57,11 +59,6 @@
       </div>
     </div>
   }
-
-  <p class="legend">
-    <span class="edit-mark" aria-hidden="true">&#9998;</span>
-    {{ 'attendance.legendEdited' | translate }}
-  </p>
 
   @if (message()) { <p class="notice">{{ message() }}</p> }
   @if (error()) { <p class="error">{{ error() }}</p> }

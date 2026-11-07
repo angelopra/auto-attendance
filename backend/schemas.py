@@ -26,8 +26,27 @@ class KnownPersonOut(KnownPersonBase):
     selfie_path: Optional[str] = None
     created_at: datetime.datetime
     updated_at: datetime.datetime
+    dismissed_at: Optional[datetime.datetime] = None
 
     model_config = {"from_attributes": True}
+
+
+PersonCategory = Literal["usual", "visitor", "dismissed"]
+
+
+class PersonOverview(BaseModel):
+    """One person as the People screen lists them: every row sharing the name, joined."""
+    person: KnownPersonOut            # the name's oldest row
+    ids: list[int]                    # every row sharing the name
+    sessions: int                     # sessions attended, ever
+    last_seen: Optional[datetime.date] = None
+    category: PersonCategory
+
+
+class PeopleOverview(BaseModel):
+    people: list[PersonOverview]
+    total_sessions: int               # every session ever recorded
+    visitor_percent: int              # visitors attended fewer than this % of them
 
 
 # ── Group Photos ───────────────────────────────────────────────────────────────
@@ -80,14 +99,16 @@ class AttendanceDetectionOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-AttendanceSource = Literal["auto", "manual"]
+#: auto: a face found in a group photo. photographer: whoever took that photo,
+#: chosen on upload. manual: added by hand (the only one flagged as edited).
+AttendanceSource = Literal["auto", "photographer", "manual"]
 
 
 class AttendanceEntry(BaseModel):
     """One presence of a person on a date, and where it came from."""
     date: datetime.date
     source: AttendanceSource
-    manual_id: Optional[int] = None   # set when source == "manual"
+    manual_id: Optional[int] = None   # set when source is "manual" or "photographer"
     note: Optional[str] = None
 
 
@@ -109,6 +130,8 @@ class ManualAttendanceOut(BaseModel):
     person_id: int
     date: datetime.date
     note: Optional[str] = None
+    photo_id: Optional[int] = None    # set for the photographer of that photo
+    source: AttendanceSource = "manual"
     created_at: datetime.datetime
     person: Optional[KnownPersonOut] = None
 
@@ -169,25 +192,41 @@ class SessionCount(BaseModel):
 
 
 class PeriodBucket(BaseModel):
-    """Sessions grouped by weekday (key "1".."7", Monday first) or by month (key "YYYY-MM")."""
+    """Sessions grouped by weekday (key "1".."7", Monday first)."""
     key: str
     sessions: int
     presences: int
+
+
+class TurnoutBucket(BaseModel):
+    """Sessions grouped by week (key: its Monday, ISO) or by month (key "YYYY-MM")."""
+    key: str
+    sessions: int
+    presences: int
+    people: int                       # different people present at least once
+
+
+class VisitorStat(BaseModel):
+    """A visitor (see reports.VISITOR_PERCENT) who came within the dashboard's range."""
+    person: KnownPersonOut
+    attended: int                     # sessions in range
+    total_attended: int               # sessions ever
+    last_seen: datetime.date
 
 
 class DashboardOut(BaseModel):
     registered_people: int
     total_presences: int
     average_attendance: float
-    average_delta: Optional[float] = None
-    attendance_rate: float
-    new_people: int
     best_session: Optional[SessionCount] = None
     per_session: list[SessionCount]
+    per_week: list[TurnoutBucket]
+    per_month: list[TurnoutBucket]
     weekdays: list[PeriodBucket]
-    months: list[PeriodBucket]        # the last 12 months with sessions
-    rate_distribution: list[int]      # people per attendance-rate band
     people: list[DashboardPersonStat] # only people with a presence in range
+    visitors: list[VisitorStat]
+    all_sessions: int                 # every session ever recorded, whatever the range
+    visitor_percent: int
 
 
 class SessionDayOut(BaseModel):

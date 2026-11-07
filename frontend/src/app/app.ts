@@ -2,13 +2,13 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '@ngx-translate/core';
 import { UploadPhoto } from './tabs/upload-photo/upload-photo';
-import { KnownFaces } from './tabs/known-faces/known-faces';
+import { People } from './tabs/people/people';
 import { Attendance } from './tabs/attendance/attendance';
 import { Dashboards } from './tabs/dashboards/dashboards';
 import { Manage } from './tabs/manage/manage';
 import { Language, LanguageService } from './services/language';
 
-export type TabId = 'upload' | 'known' | 'attendance' | 'dashboards' | 'manage';
+export type TabId = 'upload' | 'people' | 'attendance' | 'dashboards' | 'manage';
 
 interface Tab {
   id: TabId;
@@ -18,7 +18,7 @@ interface Tab {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, TranslatePipe, UploadPhoto, KnownFaces, Attendance, Dashboards, Manage],
+  imports: [CommonModule, TranslatePipe, UploadPhoto, People, Attendance, Dashboards, Manage],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
@@ -27,7 +27,7 @@ export class App {
 
   readonly tabs: Tab[] = [
     { id: 'upload', labelKey: 'nav.upload' },
-    { id: 'known', labelKey: 'nav.known' },
+    { id: 'people', labelKey: 'nav.people' },
     { id: 'attendance', labelKey: 'nav.attendance' },
     { id: 'dashboards', labelKey: 'nav.dashboards' },
     { id: 'manage', labelKey: 'nav.manage' },

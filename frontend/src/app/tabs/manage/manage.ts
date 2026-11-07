@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -15,6 +15,8 @@ import {
 } from '../../services/api';
 import { LanguageService } from '../../services/language';
 import { LocalizedDatePipe, LocalizedDateTimePipe } from '../../pipes/localized-date';
+import { Icon } from '../../components/icon/icon';
+import { PhotoViewer } from '../../components/photo-viewer/photo-viewer';
 
 /** Sessions shown when the tab opens or the search changes. */
 const FIRST_PAGE = 15;
@@ -35,12 +37,14 @@ const ACTION_KEYS: Record<string, string> = {
   photo_date_changed: 'manage.actionPhotoDateChanged',
   photo_deleted: 'manage.actionPhotoDeleted',
   person_deleted: 'manage.actionPersonDeleted',
+  person_dismissed: 'manage.actionPersonDismissed',
+  person_restored: 'manage.actionPersonRestored',
 };
 
 @Component({
   selector: 'app-manage',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, LocalizedDatePipe, LocalizedDateTimePipe],
+  imports: [CommonModule, FormsModule, TranslatePipe, LocalizedDatePipe, LocalizedDateTimePipe, Icon, PhotoViewer],
   templateUrl: './manage.html',
   styleUrl: './manage.scss',
 })
@@ -172,11 +176,6 @@ export class Manage implements OnInit {
     this.viewerPhoto.set(null);
   }
 
-  @HostListener('document:keydown.escape')
-  onEscape() {
-    this.closeViewer();
-  }
-
   // ── Sessions ────────────────────────────────────────────────────────────
   toggleDetections(photo: GroupPhoto) {
     if (this.expandedPhotoId() === photo.id) {
@@ -283,8 +282,8 @@ export class Manage implements OnInit {
   }
 
   actionKind(action: string): 'add' | 'remove' | 'move' {
-    if (action === 'presence_added') return 'add';
-    if (action === 'photo_date_changed') return 'move';
+    if (action === 'presence_added' || action === 'person_restored') return 'add';
+    if (action === 'photo_date_changed' || action === 'person_dismissed') return 'move';
     return 'remove';
   }
 

@@ -10,9 +10,10 @@
   box-shadow: var(--shadow);
 }
 
+/* Phones: the name gets its own row; the dates share the next one with the clear button. */
 .filter-bar {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr auto;
   gap: 0.6rem;
 
   .input-group {
@@ -26,7 +27,7 @@
     label { font-size: 0.8rem; }
   }
 
-  .btn-secondary { grid-column: 1 / -1; }
+  .icon-btn { align-self: end; }
 }
 
 .action-bar {
@@ -35,6 +36,7 @@
   gap: 0.5rem;
 
   > button { flex: 1 1 auto; padding-inline: 0.75rem; white-space: nowrap; }
+  > button.icon-btn { flex: none; padding: 0; }
 }
 
 .pagination-buttons {
@@ -72,15 +74,6 @@
 
     label { grid-column: 1 / -1; font-size: 0.8rem; }
   }
-}
-
-.legend {
-  display: flex;
-  gap: 0.35rem;
-  align-items: center;
-  margin: 0 0 0.6rem;
-  font-size: 0.8rem;
-  color: var(--muted);
 }
 
 .edit-mark {
@@ -231,10 +224,10 @@ table.attendance-table {
     gap: 0.6rem;
 
     .input-group { flex: 1 1 150px; }
-    .btn-secondary { flex: none; }
+    .icon-btn { flex: none; }
   }
 
-  .action-bar > button { flex: none; padding-inline: 1.1rem; }
+  .action-bar > button:not(.icon-btn) { flex: none; padding-inline: 1.1rem; }
   .pagination-buttons { flex: none; button { flex: none; width: 44px; } }
 
   .edit-panel .edit-row {

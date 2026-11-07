@@ -1,0 +1,39 @@
+<label class="picker-label" [attr.for]="listId + '-field'">{{ label() }}</label>
+
+@if (selected(); as person) {
+  <div class="chosen">
+    @if (person.selfie_path) {
+      <img [src]="selfieUrl(person.selfie_path)" alt="" class="thumb-sm" />
+    }
+    <span class="chosen-name">{{ person.name }}</span>
+    <button type="button" class="icon-btn btn-sm btn-outline" (click)="clear()"
+            [attr.aria-label]="'picker.clear' | translate" [title]="'picker.clear' | translate">
+      <app-icon name="x" />
+    </button>
+  </div>
+} @else {
+  <div class="combo">
+    <input #field type="search" role="combobox" autocomplete="off" [id]="listId + '-field'"
+           [attr.aria-expanded]="open()" [attr.aria-controls]="listId"
+           [attr.aria-activedescendant]="open() && matches().length ? listId + '-' + active() : null"
+           [placeholder]="placeholder()" [value]="query()"
+           (focus)="onFocus()" (input)="onInput($event)" (keydown)="onKeydown($event)" (blur)="onBlur()" />
+
+    @if (open()) {
+      <ul class="options" role="listbox" [id]="listId">
+        @for (person of matches(); track person.id; let i = $index) {
+          <li role="option" [id]="listId + '-' + i" [class.active]="i === active()"
+              [attr.aria-selected]="i === active()"
+              (mousedown)="$event.preventDefault()" (click)="choose(person)" (pointerenter)="active.set(i)">
+            @if (person.selfie_path) {
+              <img [src]="selfieUrl(person.selfie_path)" alt="" class="thumb-sm" loading="lazy" />
+            }
+            <span>{{ person.name }}</span>
+          </li>
+        } @empty {
+          <li class="empty">{{ 'picker.noMatch' | translate }}</li>
+        }
+      </ul>
+    }
+  </div>
+}

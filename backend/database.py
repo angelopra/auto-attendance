@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./database/kendo.db")
@@ -8,6 +8,17 @@ engine = create_engine(
     DATABASE_URL,
     connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {},
 )
+
+
+if "sqlite" in DATABASE_URL:
+    @event.listens_for(engine, "connect")
+    def _sqlite_secure_delete(dbapi_connection, _record):
+        """Overwrite deleted rows on disk, so deleting a person really erases their data."""
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA secure_delete = ON")
+        cursor.close()
+
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
@@ -27,6 +38,8 @@ def get_db():
 # tables, so existing databases need the new columns bolted on by hand.
 ADDED_COLUMNS: list[tuple[str, str, str]] = [
     ("group_photos", "date_edited_at", "DATETIME"),
+    ("known_persons", "dismissed_at", "DATETIME"),
+    ("manual_attendances", "photo_id", "INTEGER"),
 ]
 
 

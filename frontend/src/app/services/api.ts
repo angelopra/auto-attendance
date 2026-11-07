@@ -8,6 +8,30 @@ export interface KnownPerson {
   selfie_path: string | null;
   created_at: string;
   updated_at: string;
+  /** Set while the person is dismissed: kept, but counted nowhere. */
+  dismissed_at: string | null;
+}
+
+export type PersonCategory = 'usual' | 'visitor' | 'dismissed';
+
+/** One person as the People screen lists them: every row sharing the name, joined. */
+export interface PersonOverview {
+  /** The name's oldest row. */
+  person: KnownPerson;
+  /** Every row sharing the name. */
+  ids: number[];
+  /** Sessions attended, ever. */
+  sessions: number;
+  last_seen: string | null;
+  category: PersonCategory;
+}
+
+export interface PeopleOverview {
+  people: PersonOverview[];
+  /** Every session ever recorded. */
+  total_sessions: number;
+  /** Visitors attended fewer than this percentage of all sessions. */
+  visitor_percent: number;
 }
 
 export interface GroupPhoto {
@@ -53,7 +77,8 @@ export interface AttendanceDetection {
   suggestion: FaceSuggestion | null;
 }
 
-export type AttendanceSource = 'auto' | 'manual';
+/** auto: face found in a photo; photographer: who took it, chosen on upload; manual: added by hand. */
+export type AttendanceSource = 'auto' | 'photographer' | 'manual';
 
 export interface AttendanceEntry {
   date: string;
@@ -97,6 +122,9 @@ export interface ManualAttendance {
   date: string;
   note: string | null;
   created_at: string;
+  /** Set for the photographer of that photo. */
+  photo_id: number | null;
+  source: AttendanceSource;
   person: KnownPerson | null;
 }
 
@@ -123,6 +151,7 @@ export interface AttendanceExportOptions {
   dateLabel: string;
   presentLabel: string;
   manualLabel: string;
+  totalLabel: string;
   sheetName: string;
 }
 
@@ -148,29 +177,47 @@ export interface SessionCount {
   count: number;
 }
 
-/** Sessions grouped by weekday (key "1".."7", Monday first) or by month (key "YYYY-MM"). */
+/** Sessions grouped by weekday (key "1".."7", Monday first). */
 export interface PeriodBucket {
   key: string;
   sessions: number;
   presences: number;
 }
 
+/** Sessions grouped by week (key: its Monday, ISO) or by month (key "YYYY-MM"). */
+export interface TurnoutBucket {
+  key: string;
+  sessions: number;
+  presences: number;
+  /** Different people present at least once. */
+  people: number;
+}
+
+/** A visitor who came within the dashboard's range. */
+export interface VisitorStat {
+  person: KnownPerson;
+  /** Sessions in range. */
+  attended: number;
+  /** Sessions ever. */
+  total_attended: number;
+  last_seen: string;
+}
+
 export interface Dashboard {
   registered_people: number;
   total_presences: number;
   average_attendance: number;
-  average_delta: number | null;
-  attendance_rate: number;
-  new_people: number;
   best_session: SessionCount | null;
   per_session: SessionCount[];
+  per_week: TurnoutBucket[];
+  per_month: TurnoutBucket[];
   weekdays: PeriodBucket[];
-  /** The last 12 months with sessions. */
-  months: PeriodBucket[];
-  /** People per attendance-rate band. */
-  rate_distribution: number[];
   /** Only people with a presence in range. */
   people: DashboardPersonStat[];
+  visitors: VisitorStat[];
+  /** Every session ever recorded, whatever the range. */
+  all_sessions: number;
+  visitor_percent: number;
 }
 
 export interface AuditLogEntry {
@@ -216,6 +263,21 @@ export class ApiService {
     return this.http.post<KnownPerson>(this.auth(`${this.base}/persons`), fd);
   }
 
+  /** Everyone, one entry per name, with their all-time count and category. */
+  getPeopleOverview(): Observable<PeopleOverview> {
+    return this.http.get<PeopleOverview>(this.auth(`${this.base}/persons/overview`));
+  }
+
+  /** Stop counting a person anywhere, without deleting their data. */
+  dismissPerson(id: number): Observable<KnownPerson> {
+    return this.http.post<KnownPerson>(this.auth(`${this.base}/persons/${id}/dismiss`), {});
+  }
+
+  restorePerson(id: number): Observable<KnownPerson> {
+    return this.http.post<KnownPerson>(this.auth(`${this.base}/persons/${id}/restore`), {});
+  }
+
+  /** Rename a person — every row sharing their name. Onto an existing name, this merges them. */
   updatePerson(id: number, name: string): Observable<KnownPerson> {
     return this.http.patch<KnownPerson>(this.auth(`${this.base}/persons/${id}`), { name });
   }
@@ -230,6 +292,7 @@ export class ApiService {
     });
   }
 
+  /** Erase a person and everything that identifies them, for good. */
   deletePerson(id: number): Observable<void> {
     return this.http.delete<void>(this.auth(`${this.base}/persons/${id}`));
   }
@@ -246,10 +309,12 @@ export class ApiService {
     return this.http.get<PhotoSessionPage>(this.auth(`${this.base}/photos/sessions?${params}`));
   }
 
-  uploadGroupPhoto(date: string, photo: File): Observable<GroupPhoto> {
+  /** Upload and process a group photo; the photographer, if given, is counted present too. */
+  uploadGroupPhoto(date: string, photo: File, photographerId?: number | null): Observable<GroupPhoto> {
     const fd = new FormData();
     fd.append('date', date);
     fd.append('photo', photo);
+    if (photographerId != null) fd.append('photographer_id', String(photographerId));
     return this.http.post<GroupPhoto>(this.auth(`${this.base}/photos/upload`), fd);
   }
 
@@ -283,6 +348,7 @@ export class ApiService {
       date_label: options.dateLabel,
       present_label: options.presentLabel,
       manual_label: options.manualLabel,
+      total_label: options.totalLabel,
       sheet_name: options.sheetName,
     });
     options.extraDates.forEach(date => params.append('extra_dates', date));

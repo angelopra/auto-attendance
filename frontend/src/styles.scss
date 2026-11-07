@@ -30,6 +30,11 @@
 
   --edited: #c2410c;
 
+  /* Dismissing a person: reversible, so orange rather than red. */
+  --orange: #ea580c;
+  --orange-hover: #c2410c;
+  --orange-soft: #fff1e8;
+
   --radius-sm: 8px;
   --radius: 12px;
   --radius-lg: 16px;
@@ -194,7 +199,7 @@ label {
   color: var(--ink-2);
 }
 
-input[type=text], input[type=search], input[type=date], select {
+input[type=text], input[type=search], input[type=date], input[type=number], select {
   width: 100%;
   max-width: 100%;
   min-height: 44px;
@@ -300,6 +305,111 @@ button.btn-sm.danger:not(:disabled) {
   color: var(--danger);
 
   &:hover { background: var(--danger); color: #fff; }
+}
+
+button.btn-warning {
+  background: var(--orange);
+  &:hover:not(:disabled) { background: var(--orange-hover); }
+}
+
+button.btn-sm.btn-warning:not(:disabled) {
+  background: var(--orange-soft);
+  color: var(--orange-hover);
+
+  &:hover { background: var(--orange); color: #fff; }
+}
+
+/* Square button holding just an icon; its name lives in aria-label/title. */
+button.icon-btn, a.icon-btn {
+  flex: none;
+  width: 44px;
+  min-width: 44px;
+  padding: 0;
+  font-size: 1.1rem;
+
+  &.btn-sm { width: 34px; min-width: 34px; min-height: 34px; font-size: 1rem; }
+}
+
+/* The red bin: delete for good. */
+button.icon-btn.danger:not(:disabled) {
+  background: var(--danger-soft);
+  color: var(--danger);
+
+  &:hover { background: var(--danger); color: #fff; }
+}
+
+/* Segmented control: one choice among a few, e.g. tabs or a grouping. */
+.segmented {
+  display: inline-flex;
+  max-width: 100%;
+  gap: 2px;
+  padding: 3px;
+  background: #e8ebf2;
+  border-radius: var(--radius);
+
+  button {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 34px;
+    padding: 0.3rem 0.8rem;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--ink-2);
+    font-size: 0.82rem;
+    white-space: nowrap;
+
+    &:hover:not(:disabled) { background: rgba(255, 255, 255, 0.6); }
+
+    &.active, &.active:hover:not(:disabled) {
+      background: var(--surface);
+      color: var(--ink);
+      box-shadow: 0 1px 3px rgba(17, 24, 39, 0.12);
+    }
+
+    .count {
+      margin-left: 0.3rem;
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+}
+
+/* A heading with a small action beside it, e.g. the People title and its "+". */
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 1rem;
+
+  h2 { margin: 0; }
+}
+
+/* Native <dialog> as a centred card. */
+dialog.modal {
+  width: min(480px, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-lg);
+
+  &::backdrop { background: rgba(10, 12, 20, 0.55); }
+
+  .modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    padding: 1.1rem;
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
 }
 
 .spinner {
@@ -486,6 +596,8 @@ table {
   .face-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.8rem; }
 
   .thumb, .no-photo { width: 84px; height: 84px; }
+
+  dialog.modal .modal-body { padding: 1.35rem; }
 
   button.btn-sm { min-height: 34px; }
 }

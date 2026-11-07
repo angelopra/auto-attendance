@@ -1,0 +1,138 @@
+<section class="tab-panel">
+  <div class="title-row">
+    <h2>{{ 'people.title' | translate }}</h2>
+    <button type="button" class="icon-btn btn-sm" (click)="openAdd()"
+            [attr.aria-label]="'people.addTitle' | translate" [title]="'people.addTitle' | translate">
+      <app-icon name="plus" />
+    </button>
+  </div>
+
+  <div class="toolbar">
+    <div class="segmented tabs" role="tablist" [attr.aria-label]="'people.title' | translate">
+      @for (t of tabs; track t.id) {
+        <button type="button" role="tab" [class.active]="tab() === t.id" [attr.aria-selected]="tab() === t.id"
+                (click)="setTab(t.id)">
+          {{ t.labelKey | translate }}<span class="count">{{ counts()[t.id] }}</span>
+        </button>
+      }
+    </div>
+
+    <div class="filters">
+      <input type="search" [value]="search()" (input)="onSearch($event)"
+             [placeholder]="'people.searchPlaceholder' | translate"
+             [attr.aria-label]="'people.search' | translate" />
+      <label class="sort">
+        <span>{{ 'people.sortBy' | translate }}</span>
+        <select [value]="sortBy()" (change)="onSort($event)">
+          <option value="name">{{ 'people.sortName' | translate }}</option>
+          <option value="sessions">{{ 'people.sortSessions' | translate }}</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  @if (tab() === 'visitor') {
+    <p class="tab-hint">{{ visitorHint() }}</p>
+  } @else if (tab() === 'dismissed') {
+    <p class="tab-hint">{{ 'people.dismissedHint' | translate }}</p>
+  }
+
+  @if (message()) { <p class="notice">{{ message() }}</p> }
+  @if (error()) { <p class="error">{{ error() }}</p> }
+
+  @if (!overview()) {
+    <p class="muted">{{ 'common.loading' | translate }}</p>
+  } @else if (visible().length === 0) {
+    <p class="muted">
+      {{ (search().trim() ? 'people.noMatch' : 'people.empty') | translate: { term: search().trim() } }}
+    </p>
+  }
+
+  <div class="person-grid">
+    @for (p of visible(); track p.person.id) {
+      <div class="person-card" [class.selected]="isSelected(p)">
+        <label class="merge-check" [title]="'people.selectToMerge' | translate">
+          <input type="checkbox" [checked]="isSelected(p)" (change)="toggleSelect(p)"
+                 [attr.aria-label]="'people.selectToMerge' | translate" />
+        </label>
+        <button type="button" class="icon-btn btn-sm danger delete-btn" (click)="deletePerson(p)" [disabled]="busy()"
+                [attr.aria-label]="'people.delete' | translate: { name: displayName(p) }"
+                [title]="'people.delete' | translate: { name: displayName(p) }">
+          <app-icon name="trash" />
+        </button>
+
+        @if (p.person.selfie_path) {
+          <img [src]="selfieUrl(p.person.selfie_path)" [alt]="displayName(p)" class="thumb" loading="lazy" />
+        } @else {
+          <div class="no-photo">{{ 'people.noPhoto' | translate }}</div>
+        }
+
+        @if (editingId() === p.person.id) {
+          <input type="text" [(ngModel)]="editingName" class="rename-input" autofocus
+                 [title]="'people.renameHint' | translate"
+                 (keydown)="onRenameKey($event, p)" />
+          <small class="rename-hint">{{ 'people.renameHint' | translate }}</small>
+          <div class="card-actions">
+            <button class="btn-sm" (click)="saveEdit(p)">{{ 'common.save' | translate }}</button>
+            <button class="btn-sm btn-outline" (click)="cancelEdit()">{{ 'common.cancel' | translate }}</button>
+          </div>
+        } @else {
+          <span class="name">{{ displayName(p) }}</span>
+          <span class="sessions">{{ 'people.sessionCount' | translate: { count: p.sessions } }}</span>
+          <div class="card-actions">
+            <button class="btn-sm" (click)="startEdit(p)">{{ 'people.rename' | translate }}</button>
+            @if (p.category === 'dismissed') {
+              <button class="btn-sm btn-outline" (click)="restore(p)" [disabled]="busy()"
+                      [title]="'people.restoreHint' | translate">
+                {{ 'people.restore' | translate }}
+              </button>
+            } @else {
+              <button class="btn-sm btn-warning" (click)="dismiss(p)" [disabled]="busy()"
+                      [title]="'people.dismissHint' | translate">
+                {{ 'people.dismiss' | translate }}
+              </button>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  @if (selectedIds().size >= 2) {
+    <div class="merge-bar">
+      <span>{{ 'people.mergeSelected' | translate: { count: selectedIds().size } }}</span>
+      <select [(ngModel)]="mergeTarget">
+        <option [ngValue]="null">{{ 'people.mergePick' | translate }}</option>
+        @for (p of mergeTargets(); track p.person.id) {
+          <option [ngValue]="p">{{ p.person.name }} (#{{ p.person.id }})</option>
+        }
+      </select>
+      <button (click)="merge()" [disabled]="!mergeTarget">{{ 'people.merge' | translate }}</button>
+      <button class="btn-outline" (click)="clearSelection()">{{ 'common.cancel' | translate }}</button>
+      @if (mergeError()) { <span class="merge-error">{{ mergeError() }}</span> }
+    </div>
+  }
+
+  <dialog #addDialog class="modal" (close)="resetAdd()" [attr.aria-label]="'people.addTitle' | translate">
+    <form class="modal-body" (ngSubmit)="addPerson()">
+      <h3>{{ 'people.addTitle' | translate }}</h3>
+      <label>{{ 'people.name' | translate }}
+        <input type="text" name="name" [(ngModel)]="newName" [placeholder]="'people.namePlaceholder' | translate" />
+      </label>
+      <label>{{ 'people.selfie' | translate }}
+        <input #selfieInput type="file" accept="image/*" (change)="onSelfieChange($event)" />
+      </label>
+      @if (newPreview(); as src) {
+        <img [src]="src" [alt]="'people.selfie' | translate" class="thumb preview" />
+      }
+      @if (addError()) { <p class="error">{{ addError() }}</p> }
+      <div class="modal-actions">
+        <button type="button" class="btn-outline" (click)="closeAdd()">{{ 'common.cancel' | translate }}</button>
+        <button type="submit" [disabled]="saving()">
+          @if (saving()) { <span class="spinner" aria-hidden="true"></span> }
+          {{ (saving() ? 'people.saving' : 'people.add') | translate }}
+        </button>
+      </div>
+    </form>
+  </dialog>
+</section>

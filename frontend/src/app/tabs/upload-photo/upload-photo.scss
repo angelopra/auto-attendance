@@ -4,8 +4,12 @@
   .fields { display: grid; gap: 0.25rem; }
   .form-row { margin: 0; }
 
+  .submit-row { display: flex; flex-direction: column; gap: 0.75rem; }
+
   .submit { width: 100%; min-height: 48px; font-size: 1rem; }
 }
+
+.photographer-note { margin: 0; }
 
 .photo-preview {
   margin: 0;
@@ -14,7 +18,17 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
 
-  a { display: block; text-decoration: none; color: inherit; }
+  .preview-button {
+    display: block;
+    width: 100%;
+    min-height: 0;
+    padding: 0;
+    background: none;
+    border-radius: var(--radius-sm);
+    cursor: zoom-in;
+
+    &:hover:not(:disabled) { background: none; opacity: 0.92; }
+  }
 
   img {
     display: block;
@@ -97,7 +111,10 @@
   .upload-card {
     .fields { grid-template-columns: minmax(180px, 1fr) 2fr; gap: 1rem; align-items: start; }
 
-    .submit { width: auto; align-self: flex-start; padding-inline: 1.6rem; }
+    /* Photographer and the button share a row, the button level with the field. */
+    .submit-row { flex-direction: row; align-items: flex-end; gap: 1rem; }
+    .photographer { flex: 1 1 auto; }
+    .submit { flex: none; width: auto; padding-inline: 1.6rem; }
   }
 
   .photo-preview {

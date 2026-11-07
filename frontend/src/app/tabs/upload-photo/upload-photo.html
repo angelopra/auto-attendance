@@ -18,9 +18,10 @@
 
     @if (preview(); as previewSrc) {
       <figure class="photo-preview">
-        <a [href]="previewSrc" target="_blank" rel="noopener">
+        <button type="button" class="preview-button" (click)="viewerOpen.set(true)"
+                [attr.aria-label]="'upload.viewPhoto' | translate" [title]="'upload.viewPhoto' | translate">
           <img [src]="previewSrc" [alt]="'upload.previewAlt' | translate" />
-        </a>
+        </button>
         <figcaption>
           <span class="file-name">{{ fileName() }}</span>
           <span class="hint">{{ 'upload.previewHint' | translate }}</span>
@@ -29,12 +30,25 @@
           </button>
         </figcaption>
       </figure>
+
+      @if (viewerOpen()) {
+        <app-photo-viewer [src]="previewSrc" [alt]="fileName()" (closed)="viewerOpen.set(false)" />
+      }
     }
 
-    <button class="submit" (click)="upload()" [disabled]="uploading()">
-      @if (uploading()) { <span class="spinner" aria-hidden="true"></span> }
-      {{ (uploading() ? 'upload.submitting' : 'upload.submit') | translate }}
-    </button>
+    <div class="submit-row">
+      <app-person-picker class="photographer"
+        [options]="photographers()"
+        [(selected)]="photographer"
+        [label]="'upload.photographer' | translate"
+        [placeholder]="'upload.photographerPlaceholder' | translate"
+        (opened)="loadPhotographers()" />
+
+      <button class="submit" (click)="upload()" [disabled]="uploading()">
+        @if (uploading()) { <span class="spinner" aria-hidden="true"></span> }
+        {{ (uploading() ? 'upload.submitting' : 'upload.submit') | translate }}
+      </button>
+    </div>
 
     @if (error()) {
       <p class="error">{{ error() }}</p>
@@ -47,6 +61,9 @@
         <h3>{{ 'upload.processed' | translate: { date: photo.date | localizedDate } }}</h3>
         <span class="badge">{{ 'upload.facesDetected' | translate: { count: detections().length } }}</span>
       </div>
+      @if (uploadedPhotographer(); as person) {
+        <p class="notice photographer-note">{{ 'upload.photographerCounted' | translate: { name: person.name } }}</p>
+      }
       <div class="face-grid">
         @for (d of detections(); track d.id) {
           <div class="face-card" [class.has-suggestion]="showSuggestion(d)">

@@ -7,7 +7,7 @@
   .inline-field { min-width: 0; }
 }
 
-.btn-link { width: 100%; }
+.btn-link:not(.icon-btn) { width: 100%; }
 
 .session-search { max-width: 360px; }
 
@@ -83,6 +83,7 @@
     align-items: center;
 
     button { flex: 1 1 auto; }
+    button.icon-btn { flex: none; }
     input[type=date] { flex: 1 1 100%; }
   }
 }
@@ -96,6 +97,8 @@
 
   .face-grid { margin-top: 0; }
   .face-card button { margin-top: 0.2rem; width: 100%; }
+
+  .badge.dismissed { background: var(--orange-soft); border-color: #fbd3bb; color: var(--orange-hover); }
 }
 
 .audit-list {
@@ -145,30 +148,6 @@
   .small { color: var(--muted); font-size: 0.75rem; margin-top: 2px; }
 }
 
-/* Full-size photo over a dimmed page; clicking the backdrop closes it. */
-.photo-viewer {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-  background: rgba(10, 12, 20, 0.86);
-  cursor: zoom-out;
-  animation: fade 0.15s ease;
-
-  img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-    border-radius: var(--radius);
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
-    cursor: default;
-  }
-}
-
-@keyframes fade { from { opacity: 0; } }
 
 @media (min-width: 720px) {
   .backup-row {
@@ -180,7 +159,7 @@
     .inline-field { flex: 0 1 300px; }
   }
 
-  .btn-link { width: auto; }
+  .btn-link:not(.icon-btn) { width: auto; }
 
   .show-more { align-self: flex-start; }
 

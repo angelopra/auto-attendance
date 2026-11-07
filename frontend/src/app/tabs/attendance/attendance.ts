@@ -8,6 +8,7 @@ import { ApiService, AttendanceEdit, AttendanceEntry, AttendanceGridPage } from 
 import { PersonAttendance } from '../../services/attendance-data';
 import { LanguageService } from '../../services/language';
 import { LocalizedDatePipe } from '../../pipes/localized-date';
+import { Icon } from '../../components/icon/icon';
 import { saveBlob, searchMatch } from '../../tools';
 
 type AttendanceDataRow = PersonAttendance;
@@ -22,7 +23,7 @@ function columnsForWidth(width: number): number {
 @Component({
   selector: 'app-attendance',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TranslatePipe, LocalizedDatePipe],
+  imports: [CommonModule, ReactiveFormsModule, TranslatePipe, LocalizedDatePipe, Icon],
   templateUrl: './attendance.html',
   styleUrl: './attendance.scss',
 })
@@ -192,6 +193,7 @@ export class Attendance implements OnInit {
       return this.translate.instant('attendance.cellEdited', { when });
     }
 
+    if (entry?.source === 'photographer') return this.translate.instant('attendance.cellPhotographer');
     if (entry) return this.translate.instant('attendance.cellPresent');
     return this.editMode()
       ? this.translate.instant('attendance.cellAdd', { name: row.person.name, date: localDate })
@@ -220,9 +222,11 @@ export class Attendance implements OnInit {
       return;
     }
 
-    const key = entry.source === 'manual'
-      ? 'attendance.confirmRemoveManual'
-      : 'attendance.confirmRemoveAuto';
+    const key = {
+      manual: 'attendance.confirmRemoveManual',
+      photographer: 'attendance.confirmRemovePhotographer',
+      auto: 'attendance.confirmRemoveAuto',
+    }[entry.source];
     if (!confirm(this.translate.instant(key, { name: row.person.name, date: localDate }))) return;
 
     this.busy.set(true);
@@ -274,6 +278,7 @@ export class Attendance implements OnInit {
       dateLabel: this.translate.instant('attendance.excelDate'),
       presentLabel: this.translate.instant('attendance.excelPresent'),
       manualLabel: this.translate.instant('attendance.excelManual'),
+      totalLabel: this.translate.instant('attendance.excelTotal'),
       sheetName: this.translate.instant('attendance.excelSheet'),
     }).subscribe({
       next: file => {

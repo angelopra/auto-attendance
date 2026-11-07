@@ -27,7 +27,7 @@ h3 { margin: 0 0 0.15rem; }
   margin-bottom: 1rem;
 }
 
-/* Segmented control: 2×2 on phones so long labels still fit. */
+/* Segmented control: two columns on phones so long labels still fit. */
 .presets {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -56,6 +56,9 @@ h3 { margin: 0 0 0.15rem; }
       color: var(--ink);
       box-shadow: 0 1px 3px rgba(17, 24, 39, 0.12);
     }
+
+    /* Odd count: the last one spans the row. */
+    &:last-child:nth-child(odd) { grid-column: 1 / -1; }
   }
 }
 
@@ -95,19 +98,6 @@ h3 { margin: 0 0 0.15rem; }
   }
 
   .hero-meta { font-size: 0.8rem; opacity: 0.8; }
-
-  .delta {
-    align-self: flex-start;
-    margin-top: 0.45rem;
-    padding: 2px 9px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.16);
-    font-size: 0.78rem;
-    font-weight: 650;
-
-    &.up { color: #bbf7d0; }
-    &.down { color: #fecaca; }
-  }
 }
 
 .kpi-row {
@@ -135,13 +125,74 @@ h3 { margin: 0 0 0.15rem; }
 }
 
 /* ── Charts ─────────────────────────────────────────────────────────────── */
-.chart-grid {
+.grouping { align-self: flex-start; }
+
+/* Weekday toggles under the weekday chart. */
+.weekday-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+
+  .chip {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 34px;
+    padding: 0.2rem 0.75rem 0.2rem 0.55rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+
+    input { width: 15px; height: 15px; margin: 0; cursor: pointer; }
+
+    &.on { background: var(--primary-soft); border-color: #c7cbff; color: var(--primary-ink); }
+  }
+}
+
+/* Absent lately and visitors, side by side when there is room. */
+.list-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 1rem;
   margin-bottom: 1rem;
 
   .card { margin-bottom: 0; min-width: 0; }
+}
+
+.advanced {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+
+  summary {
+    padding: 0.5rem 0.75rem;
+    color: var(--ink-2);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .advanced-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+    padding: 0 0.75rem 0.75rem;
+
+    label { font-size: 0.78rem; }
+    .hint { grid-column: 1 / -1; }
+  }
+
+  .advanced-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.4rem;
+  }
 }
 
 /* ── Ranked table ───────────────────────────────────────────────────────── */
@@ -253,40 +304,17 @@ table.rank-table {
     &:last-child { border-bottom: none; }
   }
 
+  .thumb-sm { flex: none; margin: 0; }
+
+  .who-block {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    .small { font-size: 0.78rem; }
+  }
+
   .who { font-weight: 650; }
-}
-
-.status {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  border-radius: 999px;
-  padding: 2px 9px 2px 3px;
-  font-size: 0.72rem;
-  font-weight: 650;
-
-  .status-icon {
-    display: inline-grid;
-    place-items: center;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    color: #fff;
-    font-size: 0.65rem;
-    line-height: 1;
-  }
-
-  &.warning {
-    background: #fdf2d9;
-    color: #7a5300;
-    .status-icon { background: #f5a524; color: #3d2a00; }
-  }
-
-  &.critical {
-    background: var(--danger-soft);
-    color: #96201f;
-    .status-icon { background: var(--danger); }
-  }
 }
 
 @media (min-width: 720px) {
@@ -301,6 +329,7 @@ table.rank-table {
 
   .presets {
     display: inline-flex;
+    button:last-child:nth-child(odd) { grid-column: auto; }
     button { padding-inline: 0.9rem; font-size: 0.82rem; }
   }
 
@@ -322,7 +351,7 @@ table.rank-table {
   .stat-tile { padding: 0.75rem 0.9rem; .stat-value { font-size: 1.5rem; } }
   .stat-tile:last-child:nth-child(odd) { grid-column: auto; }
 
-  .chart-grid { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; margin-bottom: 1.25rem; }
+  .list-grid { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.25rem; margin-bottom: 1.25rem; }
 
   .table-wrapper { margin-inline: -1.35rem; }
 
